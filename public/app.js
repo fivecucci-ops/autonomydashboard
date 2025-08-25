@@ -1169,24 +1169,56 @@ async function loadPatientTimelines() {
             throw new Error('No data received');
         }
         
+        // Initialize task completion data if not exists
+        if (!window.taskCompletionData) {
+            window.taskCompletionData = {};
+        }
+        
         const content = document.getElementById('content');
         let html = '<h1>Patient Timelines</h1>' +
-            '<div class="legend">' +
-            '  <span class="legend-item red">Red = Action Required</span>' +
-            '  <span class="legend-item yellow">Yellow = Waiting on Response</span>' +
-            '  <span class="legend-item green">Green = Complete</span>' +
-            '  <p>Black outline indicates current progress step</p>' +
+            '<div class="timeline-header">' +
+            '  <div class="legend-box">' +
+            '    <h3>Task Status Guide</h3>' +
+            '    <div class="legend-items">' +
+            '      <div class="legend-item"><span class="bullet-demo not-started">1</span> Not Started (Orange)</div>' +
+            '      <div class="legend-item"><span class="bullet-demo partial">2</span> Partially Complete (Yellow)</div>' +
+            '      <div class="legend-item"><span class="bullet-demo complete">3</span> Fully Complete (Green)</div>' +
+            '    </div>' +
+            '  </div>' +
+            '  <div class="timeline-controls">' +
+            '    <button onclick="expandAllTimelines()">Expand All</button>' +
+            '    <button onclick="collapseAllTimelines()">Collapse All</button>' +
+            '    <button onclick="filterTimelines(\'incomplete\')">Show Incomplete</button>' +
+            '    <button onclick="filterTimelines(\'all\')">Show All</button>' +
+            '  </div>' +
             '</div>' +
             '<div class="timelines-container">';
+        
         data.forEach((patient, index) => {
             const patientName = patient['Patient Name'] || 'Unknown';
-            const progressPoint = Math.floor(Math.random() * 5) + 6; // Biased to 6-10 for mostly complete
-            const numPending = Math.floor(Math.random() * 2) + 1; // 1-2 pending
+            const patientId = `patient-${index}`;
+            
+            // Initialize patient tasks if not exists
+            if (!window.taskCompletionData[patientId]) {
+                window.taskCompletionData[patientId] = initializePatientTasks();
+            }
+            
             html += `
-                <div class="patient-timeline" data-current-step="${progressPoint}">
-                    <h3>${patientName}</h3>
-                    <div class="timeline">
-                        ${generateTimelineSteps(patient, index, progressPoint, numPending)}
+                <div class="patient-timeline-card" id="${patientId}">
+                    <div class="patient-header">
+                        <div class="patient-info">
+                            <h3>${patientName}</h3>
+                            <span class="patient-details">Age: ${patient['Age'] || 'N/A'} | Area: ${patient['Area'] || 'N/A'} | Hospice: ${patient['Hospice'] || 'N/A'}</span>
+                        </div>
+                        <div class="patient-progress">
+                            <span class="progress-text">${calculateProgress(patientId)}% Complete</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${calculateProgress(patientId)}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="timeline-tasks">
+                        ${generateImprovedTimelineSteps(patient, index)}
                     </div>
                 </div>
             `;
@@ -1200,62 +1232,239 @@ async function loadPatientTimelines() {
     }
 }
 
-// Helper to generate timeline steps
-function generateTimelineSteps(patient, index, progressPoint, numPending) {
-    const steps = [
-        { name: 'Send Written Request', key: 'WR' },
-        { name: 'Visit 1', key: 'Visit1' },
-        { name: 'Visit 2', key: 'Visit2' },
-        { name: 'Quickbooks Invoice', key: 'invoice amount' },
-        { name: 'Consulting Form', key: 'CP Completed' },
-        { name: 'Attending Checklist', key: 'Check list' },
-        { name: 'Send Prescription', key: 'Prescription Submit', subtasks: ['Review Info', 'Submit to RX', 'Confirm Delivery'] },
-        { name: 'Request Medical Records', key: 'Medical Records' },
-        { name: 'Prepare Pharmacy Email', key: 'EmailPharmacy' },
-        { name: 'Ingestions', key: 'Ingestion Date' },
-        { name: 'Follow-up Form', key: 'Physician follow up form' }
+// Initialize patient tasks with subtasks
+function initializePatientTasks() {
+    return [
+        { id: 'wr', name: 'Send Written Request', subtasks: [
+            { name: 'Draft request letter', complete: false },
+            { name: 'Get patient consent', complete: false },
+            { name: 'Send to physician', complete: false }
+        ]},
+        { id: 'visit1', name: 'Initial Visit', subtasks: [
+            { name: 'Schedule appointment', complete: false },
+            { name: 'Conduct assessment', complete: false },
+            { name: 'Document findings', complete: false }
+        ]},
+        { id: 'visit2', name: 'Follow-up Visit', subtasks: [
+            { name: 'Review initial assessment', complete: false },
+            { name: 'Meet with patient/family', complete: false },
+            { name: 'Update care plan', complete: false }
+        ]},
+        { id: 'invoice', name: 'Quickbooks Invoice', subtasks: [
+            { name: 'Create invoice', complete: false },
+            { name: 'Send to billing', complete: false },
+            { name: 'Confirm payment', complete: false }
+        ]},
+        { id: 'consulting', name: 'Consulting Form', subtasks: [
+            { name: 'Complete consultation', complete: false },
+            { name: 'Document recommendations', complete: false },
+            { name: 'Submit to physician', complete: false }
+        ]},
+        { id: 'checklist', name: 'Attending Checklist', subtasks: [
+            { name: 'Review all requirements', complete: false },
+            { name: 'Verify documentation', complete: false },
+            { name: 'Sign off completion', complete: false }
+        ]},
+        { id: 'prescription', name: 'Send Prescription', subtasks: [
+            { name: 'Review medication info', complete: false },
+            { name: 'Submit to pharmacy', complete: false },
+            { name: 'Confirm delivery', complete: false },
+            { name: 'Patient education', complete: false }
+        ]},
+        { id: 'records', name: 'Medical Records', subtasks: [
+            { name: 'Request records', complete: false },
+            { name: 'Receive documentation', complete: false },
+            { name: 'Review and file', complete: false }
+        ]},
+        { id: 'pharmacy', name: 'Pharmacy Coordination', subtasks: [
+            { name: 'Prepare email', complete: false },
+            { name: 'Send to pharmacy', complete: false },
+            { name: 'Confirm receipt', complete: false }
+        ]},
+        { id: 'ingestion', name: 'Medication Ingestion', subtasks: [
+            { name: 'Schedule ingestion', complete: false },
+            { name: 'Supervise process', complete: false },
+            { name: 'Document completion', complete: false }
+        ]},
+        { id: 'followup', name: 'Follow-up Form', subtasks: [
+            { name: 'Complete form', complete: false },
+            { name: 'Get signatures', complete: false },
+            { name: 'Submit to office', complete: false }
+        ]}
     ];
+}
+
+// Helper to generate improved timeline steps
+function generateImprovedTimelineSteps(patient, index) {
+    const patientId = `patient-${index}`;
+    const tasks = window.taskCompletionData[patientId] || initializePatientTasks();
     
-    const patientName = patient['Patient Name'];
     
-    let html = '';
-    steps.forEach((step, i) => {
-        let statusClass;
-        if (patientName === 'Clare Burd' || patientName === 'Grace Evans') {
-            if (i === 0 || i === 1) { // Steps 1 and 2 (0-indexed)
-                statusClass = 'complete';
-            } else {
-                // Normal logic for others
-                if (i < progressPoint) {
-                    statusClass = Math.random() < 0.2 ? 'waiting' : 'complete';
-                } else if (i === progressPoint) {
-                    statusClass = 'waiting';
-                } else {
-                    statusClass = (i - progressPoint <= numPending) ? 'pending' : 'pending';
-                }
-            }
+    let html = '<div class="task-list">';
+    
+    tasks.forEach((task, taskIndex) => {
+        const completedSubtasks = task.subtasks.filter(s => s.complete).length;
+        const totalSubtasks = task.subtasks.length;
+        let statusClass, statusText;
+        
+        if (completedSubtasks === 0) {
+            statusClass = 'not-started';
+            statusText = 'Not Started';
+        } else if (completedSubtasks === totalSubtasks) {
+            statusClass = 'complete';
+            statusText = 'Complete';
         } else {
-            if (i < progressPoint) {
-                statusClass = Math.random() < 0.2 ? 'waiting' : 'complete';
-            } else if (i === progressPoint) {
-                statusClass = 'waiting';
-            } else {
-                statusClass = (i - progressPoint <= numPending) ? 'pending' : 'pending';
-            }
+            statusClass = 'partial';
+            statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
         }
-        const isCurrent = i === progressPoint ? 'current' : '';
-        const checkbox = `<input type="checkbox" ${statusClass === 'complete' || statusClass === 'waiting' ? 'checked' : ''} onchange="updateStepStatus(${index}, ${i}, this.checked)">`;
-        const subtasksHtml = step.subtasks ? `<div class="subtasks" style="display: none;"><ul>${step.subtasks.map((sub, j) => `<li>${sub} <input type="checkbox" onchange="updateSubtask(${index}, ${i}, ${j}, this.checked)"></li>`).join('')}</ul></div>` : '';
+        
         html += `
-            <div class="timeline-step ${statusClass} ${isCurrent}" onclick="toggleStepDetails(${index}, ${i})">
-                <div class="bullet ${step.subtasks ? 'has-subtasks' : ''}">${i+1}</div>
-                <span>${step.name}</span>
-                ${checkbox}
-                ${subtasksHtml}
+            <div class="task-item ${statusClass}" data-task-index="${taskIndex}">
+                <div class="task-header" onclick="toggleTaskDetails('${patientId}', ${taskIndex})">
+                    <div class="task-number ${statusClass}">${taskIndex + 1}</div>
+                    <div class="task-info">
+                        <div class="task-name">${task.name}</div>
+                        <div class="task-status">${statusText}</div>
+                    </div>
+                    <div class="task-expand">▼</div>
+                </div>
+                <div class="task-subtasks" id="subtasks-${patientId}-${taskIndex}" style="display: none;">
+                    ${generateSubtasks(task, patientId, taskIndex)}
+                </div>
             </div>
         `;
     });
+    
+    html += '</div>';
     return html;
+}
+
+// Generate subtasks HTML
+function generateSubtasks(task, patientId, taskIndex) {
+    let html = '<ul class="subtask-list">';
+    task.subtasks.forEach((subtask, subIndex) => {
+        html += `
+            <li class="subtask-item">
+                <input type="checkbox" 
+                    id="subtask-${patientId}-${taskIndex}-${subIndex}"
+                    ${subtask.complete ? 'checked' : ''}
+                    onchange="updateSubtaskStatus('${patientId}', ${taskIndex}, ${subIndex}, this.checked)">
+                <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
+            </li>
+        `;
+    });
+    html += '</ul>';
+    return html;
+}
+
+// Calculate overall progress for a patient
+function calculateProgress(patientId) {
+    const tasks = window.taskCompletionData[patientId];
+    if (!tasks) return 0;
+    
+    let totalSubtasks = 0;
+    let completedSubtasks = 0;
+    
+    tasks.forEach(task => {
+        totalSubtasks += task.subtasks.length;
+        completedSubtasks += task.subtasks.filter(s => s.complete).length;
+    });
+    
+    return totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
+}
+
+// Toggle task details visibility
+function toggleTaskDetails(patientId, taskIndex) {
+    const subtasksDiv = document.getElementById(`subtasks-${patientId}-${taskIndex}`);
+    const taskItem = subtasksDiv.parentElement;
+    const expandIcon = taskItem.querySelector('.task-expand');
+    
+    if (subtasksDiv.style.display === 'none') {
+        subtasksDiv.style.display = 'block';
+        expandIcon.textContent = '▲';
+        taskItem.classList.add('expanded');
+    } else {
+        subtasksDiv.style.display = 'none';
+        expandIcon.textContent = '▼';
+        taskItem.classList.remove('expanded');
+    }
+}
+
+// Update subtask status
+function updateSubtaskStatus(patientId, taskIndex, subIndex, checked) {
+    window.taskCompletionData[patientId][taskIndex].subtasks[subIndex].complete = checked;
+    
+    // Recalculate and update the task status
+    const task = window.taskCompletionData[patientId][taskIndex];
+    const completedSubtasks = task.subtasks.filter(s => s.complete).length;
+    const totalSubtasks = task.subtasks.length;
+    
+    // Update task header
+    const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
+    const taskNumber = taskItem.querySelector('.task-number');
+    const taskStatus = taskItem.querySelector('.task-status');
+    
+    // Remove old status classes
+    taskItem.classList.remove('not-started', 'partial', 'complete');
+    taskNumber.classList.remove('not-started', 'partial', 'complete');
+    
+    // Add new status classes
+    let statusClass, statusText;
+    if (completedSubtasks === 0) {
+        statusClass = 'not-started';
+        statusText = 'Not Started';
+    } else if (completedSubtasks === totalSubtasks) {
+        statusClass = 'complete';
+        statusText = 'Complete';
+    } else {
+        statusClass = 'partial';
+        statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+    }
+    
+    taskItem.classList.add(statusClass);
+    taskNumber.classList.add(statusClass);
+    taskStatus.textContent = statusText;
+    
+    // Update overall progress
+    const progressText = document.querySelector(`#${patientId} .progress-text`);
+    const progressFill = document.querySelector(`#${patientId} .progress-fill`);
+    const progress = calculateProgress(patientId);
+    progressText.textContent = `${progress}% Complete`;
+    progressFill.style.width = `${progress}%`;
+    
+    // Save to localStorage
+    localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+}
+
+// Expand all timelines
+function expandAllTimelines() {
+    document.querySelectorAll('.task-subtasks').forEach(subtasks => {
+        subtasks.style.display = 'block';
+        subtasks.parentElement.classList.add('expanded');
+        subtasks.parentElement.querySelector('.task-expand').textContent = '▲';
+    });
+}
+
+// Collapse all timelines
+function collapseAllTimelines() {
+    document.querySelectorAll('.task-subtasks').forEach(subtasks => {
+        subtasks.style.display = 'none';
+        subtasks.parentElement.classList.remove('expanded');
+        subtasks.parentElement.querySelector('.task-expand').textContent = '▼';
+    });
+}
+
+// Filter timelines
+function filterTimelines(filter) {
+    const cards = document.querySelectorAll('.patient-timeline-card');
+    cards.forEach(card => {
+        if (filter === 'all') {
+            card.style.display = 'block';
+        } else if (filter === 'incomplete') {
+            const progress = calculateProgress(card.id);
+            card.style.display = progress < 100 ? 'block' : 'none';
+        }
+    });
 }
 
 // Toggle subtasks or details

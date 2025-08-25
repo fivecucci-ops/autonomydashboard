@@ -1311,7 +1311,7 @@ body.dark-mode {
 }
 
 .timeline-step.pending .bullet {
-    background: #ffc107;
+    background: #ff7733;
 }
 
 .subtasks {
@@ -1440,28 +1440,344 @@ body.dark-mode {
 }
 
 .legend-item.red {
-    color: #ff7733; /* Soft red */
+    color: #ff7733; /* Orange for unchecked checkboxes */
 }
 
 .legend-item.yellow {
-    color: #ffc107;
+    color: #ffc107; /* Yellow for in-progress checkboxes */
 }
 
 .legend-item.green {
-    color: #28a745;
+    color: #28a745; /* Green for checked checkboxes */
 }
 
-/* Timeline step colors */
+/* Timeline step colors - Checkbox Status Colors */
+/* Unchecked/Incomplete steps: Orange */
 .timeline-step.pending .bullet {
-    background: #ff7733; /* Soft red */
+    background: #ff7733; /* Orange for unchecked checkboxes */
 }
 
+/* In-progress/Waiting steps: Yellow */
 .timeline-step.waiting .bullet {
-    background: #ffc107; /* Yellow */
+    background: #ffc107; /* Yellow for in-progress checkboxes */
 }
 
+/* Completed/Checked steps: Green */
 .timeline-step.complete .bullet {
-    background: #28a745; /* Green */
+    background: #28a745; /* Green for checked checkboxes */
+}
+
+/* NEW IMPROVED TIMELINE STYLES */
+/* Timeline Header */
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.legend-box {
+    flex: 1;
+}
+
+.legend-box h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.legend-items {
+    display: flex;
+    gap: 30px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95em;
+}
+
+.bullet-demo {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.bullet-demo.not-started {
+    background: #ff7733;
+}
+
+.bullet-demo.partial {
+    background: #ffc107;
+}
+
+.bullet-demo.complete {
+    background: #28a745;
+}
+
+.timeline-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.timeline-controls button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.3s;
+}
+
+.timeline-controls button:hover {
+    background: #0056b3;
+}
+
+/* Patient Timeline Card */
+.patient-timeline-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+    overflow: hidden;
+    transition: transform 0.3s;
+}
+
+.patient-timeline-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+}
+
+.patient-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.patient-info h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.3em;
+}
+
+.patient-details {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.patient-progress {
+    text-align: right;
+    min-width: 200px;
+}
+
+.progress-text {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+.progress-bar {
+    width: 200px;
+    height: 8px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: white;
+    transition: width 0.5s ease;
+}
+
+/* Task List */
+.timeline-tasks {
+    padding: 20px;
+}
+
+.task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.task-item {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.task-item.expanded {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.task-header {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    cursor: pointer;
+    background: #f8f9fa;
+    transition: background 0.3s;
+}
+
+.task-header:hover {
+    background: #e9ecef;
+}
+
+.task-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
+    margin-right: 15px;
+    transition: all 0.3s;
+}
+
+.task-number.not-started {
+    background: #ff7733;
+}
+
+.task-number.partial {
+    background: #ffc107;
+}
+
+.task-number.complete {
+    background: #28a745;
+}
+
+.task-info {
+    flex: 1;
+}
+
+.task-name {
+    font-weight: 600;
+    font-size: 1.05em;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.task-status {
+    font-size: 0.85em;
+    color: #666;
+}
+
+.task-expand {
+    color: #666;
+    font-size: 18px;
+    transition: transform 0.3s;
+}
+
+.task-item.expanded .task-expand {
+    transform: rotate(180deg);
+}
+
+/* Subtasks */
+.task-subtasks {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.subtask-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.subtask-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    transition: background 0.3s;
+}
+
+.subtask-item:hover {
+    background: #f0f0f0;
+}
+
+.subtask-item:last-child {
+    margin-bottom: 0;
+}
+
+.subtask-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+.subtask-item label {
+    flex: 1;
+    cursor: pointer;
+    color: #333;
+}
+
+.subtask-item input[type="checkbox"]:checked + label {
+    color: #28a745;
+    text-decoration: line-through;
+}
+
+/* Dark mode support for new timeline */
+.dark-mode .timeline-header,
+.dark-mode .patient-timeline-card {
+    background: #1e1e1e;
+}
+
+.dark-mode .patient-header {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
+.dark-mode .task-header {
+    background: #2d2d2d;
+}
+
+.dark-mode .task-header:hover {
+    background: #3a3a3a;
+}
+
+.dark-mode .task-subtasks {
+    background: #252525;
+}
+
+.dark-mode .subtask-item {
+    background: #2d2d2d;
+}
+
+.dark-mode .subtask-item:hover {
+    background: #3a3a3a;
+}
+
+.dark-mode .task-name,
+.dark-mode .subtask-item label {
+    color: #e0e0e0;
+}
+
+.dark-mode .task-status {
+    color: #999;
 }
 
 /* Current step outline */
