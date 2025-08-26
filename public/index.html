@@ -227,8 +227,12 @@
                 </span>
             `;
             
-            // Initialize main app
-            window.initMainApp();
+                    // Initialize main app
+        window.initMainApp();
+        
+        // Make functions globally available
+        window.switchToActiveData = switchToActiveData;
+        window.switchToClosedCases = switchToClosedCases;
         }
         
         // Pinned patient functions

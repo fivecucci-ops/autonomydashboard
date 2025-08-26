@@ -65,6 +65,26 @@ function setupEventListeners() {
 }
 
 /**
+ * Switch to Active Data tab from dashboard
+ */
+function switchToActiveData() {
+    const activeDataTab = document.querySelector('[data-tab="active-data"]');
+    if (activeDataTab) {
+        switchTab('active-data', activeDataTab);
+    }
+}
+
+/**
+ * Switch to Closed Cases tab from dashboard
+ */
+function switchToClosedCases() {
+    const closedCasesTab = document.querySelector('[data-tab="closed"]');
+    if (closedCasesTab) {
+        switchTab('closed', closedCasesTab);
+    }
+}
+
+/**
  * Switch between tabs
  */
 function switchTab(tabName, tabElement) {
@@ -271,10 +291,11 @@ async function loadDashboard() {
         content.innerHTML = `
             <h1>Dashboard Overview</h1>
             <div class="dashboard-cards">
-                <div class="card">
+                <div class="card clickable-card" onclick="switchToActiveData()">
                     <h3>Active Patients</h3>
                     <div class="number">${data.length}</div>
                     <p>Currently active cases</p>
+                    <div class="card-hint">Click to view →</div>
                 </div>
                 <div class="card">
                     <h3>Average Age</h3>
@@ -286,15 +307,22 @@ async function loadDashboard() {
                     <div class="number">${paidCount}</div>
                     <p>Out of ${data.length} total</p>
                 </div>
-                <div class="card">
+                <div class="card clickable-card" onclick="switchToClosedCases()">
                     <h3>Completed Cases</h3>
                     <div class="number">${completedCount}</div>
                     <p>CP completed</p>
+                    <div class="card-hint">Click to view →</div>
                 </div>
             </div>
             
             <h2>Recent Active Patients</h2>
-            ${generatePatientTable(data.slice(0, 5))}
+            <div class="recent-patients-section">
+                <div class="section-header">
+                    <span>Showing ${Math.min(5, data.length)} of ${data.length} patients</span>
+                    <button class="view-all-btn" onclick="switchToActiveData()">View All Active Patients →</button>
+                </div>
+                ${generatePatientTable(data.slice(0, 5))}
+            </div>
         `;
         
         setStatus('Dashboard loaded successfully', 'success');
