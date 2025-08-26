@@ -85,6 +85,60 @@ function switchToClosedCases() {
 }
 
 /**
+ * Navigate to a specific patient's timeline
+ */
+function navigateToPatientTimeline(patientName, patientIndex) {
+    // Switch to the timelines tab
+    const timelinesTab = document.querySelector('[data-tab="timelines"]');
+    if (timelinesTab) {
+        switchTab('timelines', timelinesTab);
+        
+        // After switching, scroll to the specific patient's timeline
+        setTimeout(() => {
+            scrollToPatientTimeline(patientName, patientIndex);
+        }, 100);
+    }
+}
+
+/**
+ * Scroll to a specific patient's timeline
+ */
+function scrollToPatientTimeline(patientName, patientIndex) {
+    const patientId = `patient-${patientIndex}`;
+    const patientCard = document.getElementById(patientId);
+    
+    if (patientCard) {
+        // Expand the timeline if it's collapsed
+        const header = patientCard.querySelector('.patient-header');
+        const timeline = patientCard.querySelector('.timeline-tasks');
+        const arrow = header.querySelector('.collapse-arrow');
+        
+        if (timeline.style.display === 'none') {
+            timeline.style.display = 'block';
+            header.classList.remove('collapsed');
+            arrow.textContent = '▼';
+            window.timelineCollapseState[patientId] = false;
+        }
+        
+        // Scroll to the patient card
+        patientCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+        });
+        
+        // Add a highlight effect
+        patientCard.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.6)';
+        setTimeout(() => {
+            patientCard.style.boxShadow = '';
+        }, 2000);
+        
+        setStatus(`Navigated to ${patientName}'s timeline`, 'success');
+    } else {
+        setStatus(`Patient timeline not found: ${patientName}`, 'error');
+    }
+}
+
+/**
  * Switch between tabs
  */
 function switchTab(tabName, tabElement) {
@@ -183,12 +237,14 @@ function generatePatientTable(data) {
     });
     html += '<th>Actions</th></tr></thead><tbody>';
     
-    data.forEach((patient, index) => {
+            data.forEach((patient, index) => {
         html += '<tr>';
         importantColumns.forEach(col => {
             let value = patient[col] || '-';
             // Add some basic formatting
-            if (col === 'PAID' && value === 'yes') {
+            if (col === 'Patient Name') {
+                value = `<a href="#" class="patient-name-link" onclick="navigateToPatientTimeline('${patient['Patient Name']}', ${index})">${value}</a>`;
+            } else if (col === 'PAID' && value === 'yes') {
                 value = '✅ Yes';
             } else if (col === 'PAID' && value === 'no') {
                 value = '❌ No';
@@ -206,6 +262,7 @@ function generatePatientTable(data) {
         html += `
             <td>
                 <div class="patient-actions">
+                    <button class="patient-action-btn timeline" onclick="navigateToPatientTimeline('${patient['Patient Name']}', ${index})" title="View Timeline">⏱️</button>
                     <button class="patient-action-btn pin" onclick="pinPatient(${index})" title="Pin patient">📌</button>
                     <button class="patient-action-btn task" onclick="createTaskForPatient(${index})" title="Create task">📝</button>
                     <button class="patient-action-btn calendar" onclick="createEventForPatient(${index})" title="Create calendar event">📅</button>
@@ -547,7 +604,7 @@ function generatePatientView() {
             <div class="patient-card">
                 <h4>${name}</h4>
                 <ul class="patient-tasks">
-                    <li>Send Written Request <input type="checkbox"> <input type="text" placeholder="Initials" maxlength="3"></li>
+                    <li>Send Adobe Forms <input type="checkbox"> <input type="text" placeholder="Initials" maxlength="3"></li>
                     <li>Visit 1 <input type="checkbox"> <input type="text" placeholder="Initials" maxlength="3"></li>
                     <!-- Add all steps -->
                 </ul>
@@ -1202,6 +1259,11 @@ async function loadPatientTimelines() {
             window.taskCompletionData = {};
         }
         
+        // Initialize timeline collapse state if not exists
+        if (!window.timelineCollapseState) {
+            window.timelineCollapseState = {};
+        }
+        
         const content = document.getElementById('content');
         let html = '<h1>Patient Timelines</h1>' +
             '<div class="timeline-header">' +
@@ -1214,8 +1276,8 @@ async function loadPatientTimelines() {
             '    </div>' +
             '  </div>' +
             '  <div class="timeline-controls">' +
-            '    <button onclick="expandAllTimelines()">Expand All</button>' +
-            '    <button onclick="collapseAllTimelines()">Collapse All</button>' +
+            '    <button onclick="expandAllPatientTimelines()">Expand All</button>' +
+            '    <button onclick="collapseAllPatientTimelines()">Collapse All</button>' +
             '    <button onclick="filterTimelines(\'incomplete\')">Show Incomplete</button>' +
             '    <button onclick="filterTimelines(\'all\')">Show All</button>' +
             '  </div>' +
@@ -1231,12 +1293,15 @@ async function loadPatientTimelines() {
                 window.taskCompletionData[patientId] = initializePatientTasks();
             }
             
+            // Check if timeline should be collapsed (default to expanded for first load)
+            const isCollapsed = window.timelineCollapseState[patientId] === true;
+            
             html += `
                 <div class="patient-timeline-card" id="${patientId}">
-                    <div class="patient-header">
+                    <div class="patient-header ${isCollapsed ? 'collapsed' : ''}" onclick="togglePatientTimeline('${patientId}')">
                         <div class="patient-info">
                             <h3>${patientName}</h3>
-                            <span class="patient-details">Age: ${patient['Age'] || 'N/A'} | Area: ${patient['Area'] || 'N/A'} | Hospice: ${patient['Hospice'] || 'N/A'}</span>
+                            <span class="patient-details">Age: ${patient['Age'] || 'N/A'} | Area: ${patient['Area'] || 'N/A'}</span>
                         </div>
                         <div class="patient-progress">
                             <span class="progress-text">${calculateProgress(patientId)}% Complete</span>
@@ -1244,8 +1309,11 @@ async function loadPatientTimelines() {
                                 <div class="progress-fill" style="width: ${calculateProgress(patientId)}%"></div>
                             </div>
                         </div>
+                        <div class="collapse-indicator">
+                            <span class="collapse-arrow">${isCollapsed ? '▶' : '▼'}</span>
+                        </div>
                     </div>
-                    <div class="timeline-tasks">
+                    <div class="timeline-tasks" style="display: ${isCollapsed ? 'none' : 'block'}">
                         ${generateImprovedTimelineSteps(patient, index)}
                     </div>
                 </div>
@@ -1263,25 +1331,27 @@ async function loadPatientTimelines() {
 // Initialize patient tasks with subtasks
 function initializePatientTasks() {
     return [
-        { id: 'wr', name: 'Send Written Request', subtasks: [
-            { name: 'Draft request letter', complete: false },
-            { name: 'Get patient consent', complete: false },
-            { name: 'Send to physician', complete: false }
+        { id: 'wr', name: 'Send Adobe Forms', subtasks: [
+            { name: 'Written Request', complete: false, subSubtasks: [
+                { name: 'Completed by Patient', complete: false }
+            ]},
+            { name: 'Payment Schedule Form', complete: false }
         ]},
-        { id: 'visit1', name: 'Initial Visit', subtasks: [
-            { name: 'Schedule appointment', complete: false },
-            { name: 'Conduct assessment', complete: false },
-            { name: 'Document findings', complete: false }
+        { id: 'invoice', name: 'Quickbooks Invoice', subtasks: [
+            { name: 'Sent Invoice', complete: false, subSubtasks: [
+                { name: 'Paid Invoice', complete: false },
+                { name: 'Paid via Check', complete: false }
+            ]}
         ]},
         { id: 'visit2', name: 'Follow-up Visit', subtasks: [
             { name: 'Review initial assessment', complete: false },
             { name: 'Meet with patient/family', complete: false },
             { name: 'Update care plan', complete: false }
         ]},
-        { id: 'invoice', name: 'Quickbooks Invoice', subtasks: [
-            { name: 'Create invoice', complete: false },
-            { name: 'Send to billing', complete: false },
-            { name: 'Confirm payment', complete: false }
+        { id: 'visit1', name: 'Initial Visit', subtasks: [
+            { name: 'Schedule appointment', complete: false },
+            { name: 'Conduct assessment', complete: false },
+            { name: 'Document findings', complete: false }
         ]},
         { id: 'consulting', name: 'Consulting Form', subtasks: [
             { name: 'Complete consultation', complete: false },
@@ -1331,19 +1401,47 @@ function generateImprovedTimelineSteps(patient, index) {
     let html = '<div class="task-list">';
     
     tasks.forEach((task, taskIndex) => {
-        const completedSubtasks = task.subtasks.filter(s => s.complete).length;
-        const totalSubtasks = task.subtasks.length;
-        let statusClass, statusText;
+        let completedSubtasks = task.subtasks.filter(s => s.complete).length;
+        let totalSubtasks = task.subtasks.length;
         
-        if (completedSubtasks === 0) {
-            statusClass = 'not-started';
-            statusText = 'Not Started';
-        } else if (completedSubtasks === totalSubtasks) {
-            statusClass = 'complete';
-            statusText = 'Complete';
+        // Special logic for Quickbooks Invoice task
+        if (task.id === 'invoice') {
+            // For Quickbooks Invoice: main subtask must be complete AND at least one sub-subtask
+            const mainSubtask = task.subtasks[0];
+            const hasMainSubtask = mainSubtask && mainSubtask.complete;
+            const hasSubSubtasks = mainSubtask && mainSubtask.subSubtasks;
+            const completedSubSubtasks = hasSubSubtasks ? mainSubtask.subSubtasks.filter(s => s.complete).length : 0;
+            
+            if (hasMainSubtask && completedSubSubtasks >= 1) {
+                statusClass = 'complete';
+                statusText = 'Complete';
+            } else if (hasMainSubtask || completedSubSubtasks > 0) {
+                statusClass = 'partial';
+                statusText = 'Partially Complete';
+            } else {
+                statusClass = 'not-started';
+                statusText = 'Not Started';
+            }
         } else {
-            statusClass = 'partial';
-            statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+            // Standard logic for other tasks
+            // Also count sub-subtasks
+            task.subtasks.forEach(subtask => {
+                if (subtask.subSubtasks) {
+                    totalSubtasks += subtask.subSubtasks.length;
+                    completedSubtasks += subtask.subSubtasks.filter(s => s.complete).length;
+                }
+            });
+            
+            if (completedSubtasks === 0) {
+                statusClass = 'not-started';
+                statusText = 'Not Started';
+            } else if (completedSubtasks === totalSubtasks) {
+                statusClass = 'complete';
+                statusText = 'Complete';
+            } else {
+                statusClass = 'partial';
+                statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+            }
         }
         
         html += `
@@ -1380,9 +1478,80 @@ function generateSubtasks(task, patientId, taskIndex) {
                 <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
             </li>
         `;
+        
+        // Add sub-subtasks below the subtask, not nested within it
+        if (subtask.subSubtasks) {
+            subtask.subSubtasks.forEach((subSubtask, subSubIndex) => {
+                html += `
+                    <li class="sub-subtask-item">
+                        <div class="sub-subtask-content">
+                            <input type="checkbox" 
+                                id="subsubtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}"
+                                ${subSubtask.complete ? 'checked' : ''}
+                                onchange="updateSubSubtaskStatus('${patientId}', ${taskIndex}, ${subIndex}, ${subSubIndex}, this.checked)">
+                            <label for="subsubtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}">${subSubtask.name}</label>
+                        </div>
+                    </li>
+                `;
+            });
+        }
     });
     html += '</ul>';
     return html;
+}
+
+
+
+// Toggle individual patient timeline
+function togglePatientTimeline(patientId) {
+    const card = document.getElementById(patientId);
+    const header = card.querySelector('.patient-header');
+    const timeline = card.querySelector('.timeline-tasks');
+    const arrow = header.querySelector('.collapse-arrow');
+    
+    const isCollapsed = timeline.style.display === 'none';
+    
+    // Update display state
+    timeline.style.display = isCollapsed ? 'block' : 'none';
+    header.classList.toggle('collapsed', !isCollapsed);
+    arrow.textContent = isCollapsed ? '▼' : '▶';
+    
+    // Save state
+    window.timelineCollapseState[patientId] = !isCollapsed;
+}
+
+// Expand all patient timelines
+function expandAllPatientTimelines() {
+    document.querySelectorAll('.patient-timeline-card').forEach(card => {
+        const patientId = card.id;
+        const timeline = card.querySelector('.timeline-tasks');
+        const header = card.querySelector('.patient-header');
+        const arrow = header.querySelector('.collapse-arrow');
+        
+        timeline.style.display = 'block';
+        header.classList.remove('collapsed');
+        arrow.textContent = '▼';
+        
+        // Save state
+        window.timelineCollapseState[patientId] = false;
+    });
+}
+
+// Collapse all patient timelines
+function collapseAllPatientTimelines() {
+    document.querySelectorAll('.patient-timeline-card').forEach(card => {
+        const patientId = card.id;
+        const timeline = card.querySelector('.timeline-tasks');
+        const header = card.querySelector('.patient-header');
+        const arrow = header.querySelector('.collapse-arrow');
+        
+        timeline.style.display = 'none';
+        header.classList.add('collapsed');
+        arrow.textContent = '▶';
+        
+        // Save state
+        window.timelineCollapseState[patientId] = true;
+    });
 }
 
 // Calculate overall progress for a patient
@@ -1394,8 +1563,28 @@ function calculateProgress(patientId) {
     let completedSubtasks = 0;
     
     tasks.forEach(task => {
-        totalSubtasks += task.subtasks.length;
-        completedSubtasks += task.subtasks.filter(s => s.complete).length;
+        if (task.id === 'invoice') {
+            // Special logic for Quickbooks Invoice
+            totalSubtasks += 1; // Count as 1 task
+            const mainSubtask = task.subtasks[0];
+            const hasMainSubtask = mainSubtask && mainSubtask.complete;
+            const completedSubSubtasks = mainSubtask && mainSubtask.subSubtasks ? mainSubtask.subSubtasks.filter(s => s.complete).length : 0;
+            if (hasMainSubtask && completedSubSubtasks >= 1) {
+                completedSubtasks += 1;
+            }
+        } else {
+            // Standard logic for other tasks
+            totalSubtasks += task.subtasks.length;
+            completedSubtasks += task.subtasks.filter(s => s.complete).length;
+            
+            // Also count sub-subtasks
+            task.subtasks.forEach(subtask => {
+                if (subtask.subSubtasks) {
+                    totalSubtasks += subtask.subSubtasks.length;
+                    completedSubtasks += subtask.subSubtasks.filter(s => s.complete).length;
+                }
+            });
+        }
     });
     
     return totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
@@ -1424,8 +1613,16 @@ function updateSubtaskStatus(patientId, taskIndex, subIndex, checked) {
     
     // Recalculate and update the task status
     const task = window.taskCompletionData[patientId][taskIndex];
-    const completedSubtasks = task.subtasks.filter(s => s.complete).length;
-    const totalSubtasks = task.subtasks.length;
+    let completedSubtasks = task.subtasks.filter(s => s.complete).length;
+    let totalSubtasks = task.subtasks.length;
+    
+    // Also count sub-subtasks
+    task.subtasks.forEach(subtask => {
+        if (subtask.subSubtasks) {
+            totalSubtasks += subtask.subSubtasks.length;
+            completedSubtasks += subtask.subSubtasks.filter(s => s.complete).length;
+        }
+    });
     
     // Update task header
     const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
@@ -1462,6 +1659,66 @@ function updateSubtaskStatus(patientId, taskIndex, subIndex, checked) {
     
     // Save to localStorage
     localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+}
+
+// Update sub-subtask status
+function updateSubSubtaskStatus(patientId, taskIndex, subIndex, subSubIndex, checked) {
+    if (window.taskCompletionData[patientId] && 
+        window.taskCompletionData[patientId][taskIndex] && 
+        window.taskCompletionData[patientId][taskIndex].subtasks[subIndex] &&
+        window.taskCompletionData[patientId][taskIndex].subtasks[subIndex].subSubtasks) {
+        
+        window.taskCompletionData[patientId][taskIndex].subtasks[subIndex].subSubtasks[subSubIndex].complete = checked;
+        
+        // Recalculate and update the task status
+        const task = window.taskCompletionData[patientId][taskIndex];
+        let completedSubtasks = task.subtasks.filter(s => s.complete).length;
+        let totalSubtasks = task.subtasks.length;
+        
+        // Also count sub-subtasks
+        task.subtasks.forEach(subtask => {
+            if (subtask.subSubtasks) {
+                totalSubtasks += subtask.subSubtasks.length;
+                completedSubtasks += subtask.subSubtasks.filter(s => s.complete).length;
+            }
+        });
+        
+        // Update task header
+        const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
+        const taskNumber = taskItem.querySelector('.task-number');
+        const taskStatus = taskItem.querySelector('.task-status');
+        
+        // Remove old status classes
+        taskItem.classList.remove('not-started', 'partial', 'complete');
+        taskNumber.classList.remove('not-started', 'partial', 'complete');
+        
+        // Add new status classes
+        let statusClass, statusText;
+        if (completedSubtasks === 0) {
+            statusClass = 'not-started';
+            statusText = 'Not Started';
+        } else if (completedSubtasks === totalSubtasks) {
+            statusClass = 'complete';
+            statusText = 'Complete';
+        } else {
+            statusClass = 'partial';
+            statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+        }
+        
+        taskItem.classList.add(statusClass);
+        taskNumber.classList.add(statusClass);
+        taskStatus.textContent = statusText;
+        
+        // Update overall progress
+        const progressText = document.querySelector(`#${patientId} .progress-text`);
+        const progressFill = document.querySelector(`#${patientId} .progress-fill`);
+        const progress = calculateProgress(patientId);
+        progressText.textContent = `${progress}% Complete`;
+        progressFill.style.width = `${progress}%`;
+        
+        // Save to localStorage
+        localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+    }
 }
 
 // Expand all timelines
