@@ -1474,7 +1474,14 @@ function initializePatientTasks() {
             id: 'records', 
             name: 'Medical Records', 
             subtasks: [
-                { name: 'Request Medical Records', complete: false },
+                { 
+                    name: 'Request Medical Records', 
+                    complete: false,
+                    subSubtasks: [
+                        { name: 'Hospice/Doctor Name', complete: false },
+                        { name: 'Request Method (Email/Doximity)', complete: false }
+                    ]
+                },
                 { name: 'Medical Records Received', complete: false }
             ]
         },
