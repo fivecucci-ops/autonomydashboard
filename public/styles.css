@@ -2648,6 +2648,7 @@ body.dark-mode {
     width: 100%; /* Ensure full width */
     min-width: 0; /* Allow flex shrinking */
     border-radius: 10px;
+    flex-direction: row; /* Force horizontal layout */
 }
 
 .task-header:hover {
@@ -2684,6 +2685,8 @@ body.dark-mode {
     flex: 1;
     min-width: 0; /* Allow text to wrap properly */
     word-wrap: break-word; /* Ensure long text wraps */
+    writing-mode: horizontal-tb; /* Force horizontal text orientation */
+    text-orientation: mixed; /* Maintain normal text direction */
 }
 
 .task-name {
@@ -2694,11 +2697,15 @@ body.dark-mode {
     word-wrap: break-word;
     overflow-wrap: break-word;
     hyphens: auto;
+    writing-mode: horizontal-tb; /* Force horizontal text */
+    text-orientation: mixed; /* Normal text direction */
 }
 
 .task-status {
     font-size: 0.85em;
     color: #666;
+    writing-mode: horizontal-tb; /* Force horizontal text */
+    text-orientation: mixed; /* Normal text direction */
 }
 
 .task-expand {
