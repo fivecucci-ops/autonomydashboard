@@ -327,6 +327,14 @@ body.dark-mode {
     background: #219a52;
 }
 
+.patient-action-btn.timeline {
+    background: #667eea;
+}
+
+.patient-action-btn.timeline:hover {
+    background: #5a67d8;
+}
+
 /* Contact links */
 .contact-link {
     color: #007bff;
@@ -357,6 +365,29 @@ body.dark-mode {
 
 .patient-name:hover {
     color: #3498db;
+}
+
+/* Patient name links in tables */
+.patient-name-link {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.patient-name-link:hover {
+    color: #5a67d8;
+    text-decoration: underline;
+    transform: translateX(2px);
+}
+
+.dark-mode .patient-name-link {
+    color: #a3bffa;
+}
+
+.dark-mode .patient-name-link:hover {
+    color: #818cf8;
 }
 
 /* Loading spinner */
@@ -2371,6 +2402,8 @@ body.dark-mode {
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
 }
 
+
+
 .patient-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -2378,6 +2411,14 @@ body.dark-mode {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.patient-header:hover {
+    background: linear-gradient(135deg, #7985ec 0%, #8759b3 100%);
+    transform: translateX(2px);
 }
 
 .patient-info h3 {
@@ -2399,6 +2440,7 @@ body.dark-mode {
     display: block;
     margin-bottom: 8px;
     font-size: 0.9em;
+    color: white;
 }
 
 .progress-bar {
@@ -2418,6 +2460,48 @@ body.dark-mode {
 /* Task List */
 .timeline-tasks {
     padding: 20px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    max-height: none;
+}
+
+/* Collapse indicator styles */
+.collapse-indicator {
+    margin-left: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.collapse-arrow {
+    font-size: 1.2em;
+    transition: transform 0.3s ease;
+    color: white;
+    opacity: 0.9;
+}
+
+.patient-header:hover .collapse-arrow {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Collapsed state styles */
+.patient-header.collapsed {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* Ensure collapsed timelines take minimal space */
+.patient-timeline-card .timeline-tasks[style*="display: none"] {
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
+
+
+.patient-header.collapsed .collapse-arrow {
+    transform: rotate(0deg);
 }
 
 .task-list {
@@ -2561,6 +2645,16 @@ body.dark-mode {
     background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
 }
 
+.dark-mode .patient-header:hover {
+    background: linear-gradient(135deg, #5a6578 0%, #3d4758 100%);
+}
+
+.dark-mode .collapse-arrow {
+    color: #e2e8f0;
+}
+
+
+
 .dark-mode .task-header {
     background: #2d2d2d;
 }
@@ -2584,6 +2678,27 @@ body.dark-mode {
 .dark-mode .task-name,
 .dark-mode .subtask-item label {
     color: #e0e0e0;
+}
+
+/* Sub-subtask styling */
+.sub-subtask-item {
+    display: block;
+    margin: 4px 0 4px 20px;
+    padding: 6px 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.sub-subtask-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dark-mode .sub-subtask-item {
+    background: #2a2a2a;
+    border-left-color: #555;
 }
 
 .dark-mode .task-status {
