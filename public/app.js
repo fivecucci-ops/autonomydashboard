@@ -1555,9 +1555,8 @@ function initializePatientTasks() {
             id: 'pharmacy', 
             name: 'Pharmacy Coordination', 
             subtasks: [
-                { name: 'Contact Information Verified', complete: false },
-                { name: 'Medication Order Sent', complete: false },
-                { name: 'Delivery Scheduled', complete: false }
+                { name: 'Email Drafted', complete: false },
+                { name: 'Email Sent', complete: false }
             ]
         },
         { 
