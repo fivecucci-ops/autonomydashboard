@@ -1769,7 +1769,7 @@ function calculateProgress(patientId) {
             const paidViaQuickbooks = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
             const paidViaCheck = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Check')?.complete || false;
             
-            // Count subtasks for total (not sub-subtasks)
+            // Count subtasks for total
             totalItems += task.subtasks.length;
             
             // Count completed items with special logic
@@ -1804,7 +1804,28 @@ function calculateProgress(patientId) {
         }
     });
     
-    return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+    // Ensure we return a valid percentage
+    const percentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+    
+    // Debug logging to help troubleshoot
+    console.log(`Progress calculation for ${patientId}:`, {
+        completedItems,
+        totalItems,
+        percentage,
+        tasks: tasks.map(t => ({
+            name: t.name,
+            subtasks: t.subtasks.map(s => ({
+                name: s.name,
+                complete: s.complete,
+                subSubtasks: s.subSubtasks?.map(ss => ({
+                    name: ss.name,
+                    complete: ss.complete
+                }))
+            }))
+        }))
+    });
+    
+    return percentage;
 }
 
 // Toggle task details visibility
