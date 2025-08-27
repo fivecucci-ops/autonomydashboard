@@ -1312,13 +1312,8 @@ function initializePatientTasks() {
             id: 'wr', 
             name: 'Send Adobe Forms', 
             subtasks: [
-                { 
-                    name: 'Written Request', 
-                    complete: false, 
-                    subSubtasks: [
-                        { name: 'Completed by Patient', complete: false }
-                    ]
-                },
+                { name: 'Written Request', complete: false },
+                { name: 'Completed by Patient', complete: false },
                 { name: 'Payment Schedule Form', complete: false }
             ]
         },
@@ -1326,14 +1321,9 @@ function initializePatientTasks() {
             id: 'invoice', 
             name: 'Quickbooks Invoice', 
             subtasks: [
-                { 
-                    name: 'Sent Invoice', 
-                    complete: false, 
-                    subSubtasks: [
-                        { name: 'Paid Invoice', complete: false },
-                        { name: 'Paid via Check', complete: false }
-                    ]
-                }
+                { name: 'Sent Invoice', complete: false },
+                { name: 'Paid Invoice', complete: false },
+                { name: 'Paid via Check', complete: false }
             ]
         },
         { 
@@ -1469,7 +1459,7 @@ function generateImprovedTimelineSteps(patient, index) {
     return html;
 }
 
-// Generate subtasks HTML with sub-subtask support
+// Generate subtasks HTML
 function generateSubtasks(task, patientId, taskIndex) {
     let html = '<ul class="subtask-list">';
     task.subtasks.forEach((subtask, subIndex) => {
@@ -1478,28 +1468,10 @@ function generateSubtasks(task, patientId, taskIndex) {
                 <input type="checkbox" 
                     id="subtask-${patientId}-${taskIndex}-${subIndex}"
                     ${subtask.complete ? 'checked' : ''}
-                    onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex}, null)">
+                    onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex})">
                 <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
+            </li>
         `;
-        
-        // Add sub-subtasks if they exist
-        if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
-            html += '<ul class="sub-subtask-list">';
-            subtask.subSubtasks.forEach((subSubtask, subSubIndex) => {
-                html += `
-                    <li class="sub-subtask-item">
-                        <input type="checkbox" 
-                            id="subsubtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}"
-                            ${subSubtask.complete ? 'checked' : ''}
-                            onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex}, ${subSubIndex})">
-                        <label for="subsubtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}">${subSubtask.name}</label>
-                    </li>
-                `;
-            });
-            html += '</ul>';
-        }
-        
-        html += '</li>';
     });
     html += '</ul>';
     return html;
@@ -1548,19 +1520,13 @@ function toggleTaskDetails(patientId, taskIndex) {
     }
 }
 
-// Toggle subtask or sub-subtask completion status
-function toggleSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
+// Toggle subtask completion status
+function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     const task = window.taskCompletionData[patientId][taskIndex];
     
-    if (subSubtaskIndex !== null) {
-        // Toggle sub-subtask
-        const checked = !task.subtasks[subtaskIndex].subSubtasks[subSubtaskIndex].complete;
-        task.subtasks[subtaskIndex].subSubtasks[subSubtaskIndex].complete = checked;
-    } else {
-        // Toggle subtask
-        const checked = !task.subtasks[subtaskIndex].complete;
-        task.subtasks[subtaskIndex].complete = checked;
-    }
+    // Toggle subtask
+    const checked = !task.subtasks[subtaskIndex].complete;
+    task.subtasks[subtaskIndex].complete = checked;
     
     // Recalculate task completion status
     let completedSubtasks = 0;
@@ -1569,15 +1535,6 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
     task.subtasks.forEach(subtask => {
         totalSubtasks++;
         if (subtask.complete) completedSubtasks++;
-        
-        // Count sub-subtasks for Quickbooks Invoice special handling
-        if (task.id === 'invoice' && subtask.subSubtasks) {
-            const completedSubSubs = subtask.subSubtasks.filter(s => s.complete).length;
-            if (completedSubSubs > 0) {
-                subtask.complete = true;
-                if (completedSubtasks === 0) completedSubtasks = 1;
-            }
-        }
     });
     
     // Update task header visual status
