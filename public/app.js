@@ -1517,9 +1517,9 @@ function initializePatientTasks() {
             id: 'attending', 
             name: 'Attending Form', 
             subtasks: [
-                { name: 'Requirements Verified', complete: false },
-                { name: 'Documentation Complete', complete: false },
-                { name: 'Approved by Attending', complete: false }
+                { name: 'Started', complete: false },
+                { name: 'Complete', complete: false },
+                { name: 'In Emails Drafts', complete: false }
             ]
         },
         { 
