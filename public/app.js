@@ -1489,7 +1489,13 @@ function initializePatientTasks() {
             id: 'visit1', 
             name: 'Visit 1', 
             subtasks: [
-                { name: 'Scheduled', complete: false },
+                { 
+                    name: 'Scheduled', 
+                    complete: false,
+                    subSubtasks: [
+                        { name: 'Visit 1 Date', type: 'input', value: '', complete: false }
+                    ]
+                },
                 { name: 'Complete', complete: false }
             ]
         },
