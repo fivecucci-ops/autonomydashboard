@@ -2859,6 +2859,46 @@ body.dark-mode {
     text-decoration: line-through;
 }
 
+/* Input sub-subtask styling */
+.sub-subtask-item.input-subtask {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.sub-subtask-item.input-subtask label {
+    font-weight: 500;
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.sub-subtask-item.input-subtask input[type="text"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    background: white;
+    transition: border-color 0.3s;
+}
+
+.sub-subtask-item.input-subtask input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.dark-mode .sub-subtask-item.input-subtask input[type="text"] {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+.dark-mode .sub-subtask-item.input-subtask input[type="text"]:focus {
+    border-color: #667eea;
+}
+
 /* Subtasks */
 .task-subtasks {
     background: #f8f9fa;
