@@ -1305,65 +1305,122 @@ async function loadPatientTimelines() {
     }
 }
 
-// Initialize patient tasks with subtasks
+// Initialize patient tasks with subtasks and sub-subtasks
 function initializePatientTasks() {
     return [
-        { id: 'wr', name: 'Send Written Request', subtasks: [
-            { name: 'Draft request letter', complete: false },
-            { name: 'Get patient consent', complete: false },
-            { name: 'Send to physician', complete: false }
-        ]},
-        { id: 'visit1', name: 'Initial Visit', subtasks: [
-            { name: 'Schedule appointment', complete: false },
-            { name: 'Conduct assessment', complete: false },
-            { name: 'Document findings', complete: false }
-        ]},
-        { id: 'visit2', name: 'Follow-up Visit', subtasks: [
-            { name: 'Review initial assessment', complete: false },
-            { name: 'Meet with patient/family', complete: false },
-            { name: 'Update care plan', complete: false }
-        ]},
-        { id: 'invoice', name: 'Quickbooks Invoice', subtasks: [
-            { name: 'Create invoice', complete: false },
-            { name: 'Send to billing', complete: false },
-            { name: 'Confirm payment', complete: false }
-        ]},
-        { id: 'consulting', name: 'Consulting Form', subtasks: [
-            { name: 'Complete consultation', complete: false },
-            { name: 'Document recommendations', complete: false },
-            { name: 'Submit to physician', complete: false }
-        ]},
-        { id: 'checklist', name: 'Attending Checklist', subtasks: [
-            { name: 'Review all requirements', complete: false },
-            { name: 'Verify documentation', complete: false },
-            { name: 'Sign off completion', complete: false }
-        ]},
-        { id: 'prescription', name: 'Send Prescription', subtasks: [
-            { name: 'Review medication info', complete: false },
-            { name: 'Submit to pharmacy', complete: false },
-            { name: 'Confirm delivery', complete: false },
-            { name: 'Patient education', complete: false }
-        ]},
-        { id: 'records', name: 'Medical Records', subtasks: [
-            { name: 'Request records', complete: false },
-            { name: 'Receive documentation', complete: false },
-            { name: 'Review and file', complete: false }
-        ]},
-        { id: 'pharmacy', name: 'Pharmacy Coordination', subtasks: [
-            { name: 'Prepare email', complete: false },
-            { name: 'Send to pharmacy', complete: false },
-            { name: 'Confirm receipt', complete: false }
-        ]},
-        { id: 'ingestion', name: 'Medication Ingestion', subtasks: [
-            { name: 'Schedule ingestion', complete: false },
-            { name: 'Supervise process', complete: false },
-            { name: 'Document completion', complete: false }
-        ]},
-        { id: 'followup', name: 'Follow-up Form', subtasks: [
-            { name: 'Complete form', complete: false },
-            { name: 'Get signatures', complete: false },
-            { name: 'Submit to office', complete: false }
-        ]}
+        { 
+            id: 'wr', 
+            name: 'Send Adobe Forms', 
+            subtasks: [
+                { 
+                    name: 'Written Request', 
+                    complete: false, 
+                    subSubtasks: [
+                        { name: 'Completed by Patient', complete: false }
+                    ]
+                },
+                { name: 'Payment Schedule Form', complete: false }
+            ]
+        },
+        { 
+            id: 'invoice', 
+            name: 'Quickbooks Invoice', 
+            subtasks: [
+                { 
+                    name: 'Sent Invoice', 
+                    complete: false, 
+                    subSubtasks: [
+                        { name: 'Paid Invoice', complete: false },
+                        { name: 'Paid via Check', complete: false }
+                    ]
+                }
+            ]
+        },
+        { 
+            id: 'visit2', 
+            name: 'Follow-up Visit', 
+            subtasks: [
+                { name: 'Scheduled', complete: false },
+                { name: 'Completed', complete: false },
+                { name: 'Notes Documented', complete: false }
+            ]
+        },
+        { 
+            id: 'visit1', 
+            name: 'Initial Visit', 
+            subtasks: [
+                { name: 'Scheduled', complete: false },
+                { name: 'Assessment Completed', complete: false },
+                { name: 'Care Plan Created', complete: false }
+            ]
+        },
+        { 
+            id: 'consulting', 
+            name: 'Consulting Form', 
+            subtasks: [
+                { name: 'Physician Consultation', complete: false },
+                { name: 'Form Completed', complete: false },
+                { name: 'Submitted to Office', complete: false }
+            ]
+        },
+        { 
+            id: 'checklist', 
+            name: 'Attending Checklist', 
+            subtasks: [
+                { name: 'Requirements Verified', complete: false },
+                { name: 'Documentation Complete', complete: false },
+                { name: 'Approved by Attending', complete: false }
+            ]
+        },
+        { 
+            id: 'prescription', 
+            name: 'Send Prescription', 
+            subtasks: [
+                { name: 'Prescription Written', complete: false },
+                { name: 'Sent to Pharmacy', complete: false },
+                { name: 'Delivery Confirmed', complete: false },
+                { name: 'Patient Educated', complete: false }
+            ]
+        },
+        { 
+            id: 'records', 
+            name: 'Medical Records', 
+            subtasks: [
+                { name: 'Records Requested', complete: false },
+                { name: 'Records Received', complete: false },
+                { name: 'Records Reviewed', complete: false },
+                { name: 'Filed in System', complete: false }
+            ]
+        },
+        { 
+            id: 'pharmacy', 
+            name: 'Pharmacy Coordination', 
+            subtasks: [
+                { name: 'Contact Information Verified', complete: false },
+                { name: 'Medication Order Sent', complete: false },
+                { name: 'Delivery Scheduled', complete: false }
+            ]
+        },
+        { 
+            id: 'ingestion', 
+            name: 'Medication Ingestion', 
+            subtasks: [
+                { name: 'Patient Prepared', complete: false },
+                { name: 'Medication Administered', complete: false },
+                { name: 'Monitoring Complete', complete: false },
+                { name: 'Documentation Filed', complete: false }
+            ]
+        },
+        { 
+            id: 'followup', 
+            name: 'Follow-up Form', 
+            subtasks: [
+                { name: 'Form Initiated', complete: false },
+                { name: 'Data Collected', complete: false },
+                { name: 'Signatures Obtained', complete: false },
+                { name: 'Submitted to Office', complete: false }
+            ]
+        }
     ];
 }
 
@@ -1412,7 +1469,7 @@ function generateImprovedTimelineSteps(patient, index) {
     return html;
 }
 
-// Generate subtasks HTML
+// Generate subtasks HTML with sub-subtask support
 function generateSubtasks(task, patientId, taskIndex) {
     let html = '<ul class="subtask-list">';
     task.subtasks.forEach((subtask, subIndex) => {
@@ -1421,29 +1478,57 @@ function generateSubtasks(task, patientId, taskIndex) {
                 <input type="checkbox" 
                     id="subtask-${patientId}-${taskIndex}-${subIndex}"
                     ${subtask.complete ? 'checked' : ''}
-                    onchange="updateSubtaskStatus('${patientId}', ${taskIndex}, ${subIndex}, this.checked)">
+                    onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex}, null)">
                 <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
-            </li>
         `;
+        
+        // Add sub-subtasks if they exist
+        if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
+            html += '<ul class="sub-subtask-list">';
+            subtask.subSubtasks.forEach((subSubtask, subSubIndex) => {
+                html += `
+                    <li class="sub-subtask-item">
+                        <input type="checkbox" 
+                            id="subsubtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}"
+                            ${subSubtask.complete ? 'checked' : ''}
+                            onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex}, ${subSubIndex})">
+                        <label for="subsubtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}">${subSubtask.name}</label>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+        }
+        
+        html += '</li>';
     });
     html += '</ul>';
     return html;
 }
 
-// Calculate overall progress for a patient
+// Calculate overall progress for a patient (including sub-subtasks)
 function calculateProgress(patientId) {
     const tasks = window.taskCompletionData[patientId];
     if (!tasks) return 0;
     
-    let totalSubtasks = 0;
-    let completedSubtasks = 0;
+    let totalItems = 0;
+    let completedItems = 0;
     
     tasks.forEach(task => {
-        totalSubtasks += task.subtasks.length;
-        completedSubtasks += task.subtasks.filter(s => s.complete).length;
+        task.subtasks.forEach(subtask => {
+            totalItems++;
+            if (subtask.complete) completedItems++;
+            
+            // Count sub-subtasks too
+            if (subtask.subSubtasks) {
+                subtask.subSubtasks.forEach(subSubtask => {
+                    totalItems++;
+                    if (subSubtask.complete) completedItems++;
+                });
+            }
+        });
     });
     
-    return totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
+    return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 }
 
 // Toggle task details visibility
@@ -1463,16 +1548,39 @@ function toggleTaskDetails(patientId, taskIndex) {
     }
 }
 
-// Update subtask status
-function updateSubtaskStatus(patientId, taskIndex, subIndex, checked) {
-    window.taskCompletionData[patientId][taskIndex].subtasks[subIndex].complete = checked;
-    
-    // Recalculate and update the task status
+// Toggle subtask or sub-subtask completion status
+function toggleSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
     const task = window.taskCompletionData[patientId][taskIndex];
-    const completedSubtasks = task.subtasks.filter(s => s.complete).length;
-    const totalSubtasks = task.subtasks.length;
     
-    // Update task header
+    if (subSubtaskIndex !== null) {
+        // Toggle sub-subtask
+        const checked = !task.subtasks[subtaskIndex].subSubtasks[subSubtaskIndex].complete;
+        task.subtasks[subtaskIndex].subSubtasks[subSubtaskIndex].complete = checked;
+    } else {
+        // Toggle subtask
+        const checked = !task.subtasks[subtaskIndex].complete;
+        task.subtasks[subtaskIndex].complete = checked;
+    }
+    
+    // Recalculate task completion status
+    let completedSubtasks = 0;
+    let totalSubtasks = 0;
+    
+    task.subtasks.forEach(subtask => {
+        totalSubtasks++;
+        if (subtask.complete) completedSubtasks++;
+        
+        // Count sub-subtasks for Quickbooks Invoice special handling
+        if (task.id === 'invoice' && subtask.subSubtasks) {
+            const completedSubSubs = subtask.subSubtasks.filter(s => s.complete).length;
+            if (completedSubSubs > 0) {
+                subtask.complete = true;
+                if (completedSubtasks === 0) completedSubtasks = 1;
+            }
+        }
+    });
+    
+    // Update task header visual status
     const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
     const taskNumber = taskItem.querySelector('.task-number');
     const taskStatus = taskItem.querySelector('.task-status');
@@ -1481,7 +1589,7 @@ function updateSubtaskStatus(patientId, taskIndex, subIndex, checked) {
     taskItem.classList.remove('not-started', 'partial', 'complete');
     taskNumber.classList.remove('not-started', 'partial', 'complete');
     
-    // Add new status classes
+    // Determine new status
     let statusClass, statusText;
     if (completedSubtasks === 0) {
         statusClass = 'not-started';
@@ -1491,7 +1599,7 @@ function updateSubtaskStatus(patientId, taskIndex, subIndex, checked) {
         statusText = 'Complete';
     } else {
         statusClass = 'partial';
-        statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+        statusText = 'Partially Complete';
     }
     
     taskItem.classList.add(statusClass);
@@ -1522,13 +1630,42 @@ function toggleTimelineCard(patientId) {
     }
 }
 
-// Expand all timelines
-function expandAllTimelines() {
-    // Expand all patient timeline cards
+// Expand all patient timeline cards
+function expandAllPatientTimelines() {
     const cards = document.querySelectorAll('.patient-timeline-card');
     cards.forEach(card => {
         card.classList.remove('collapsed');
+        const indicator = card.querySelector('.collapse-indicator');
+        if (indicator) indicator.style.transform = 'none';
+        
+        // Update collapse state
+        const patientId = card.id;
+        if (window.timelineCollapseState) {
+            window.timelineCollapseState[patientId] = false;
+        }
     });
+}
+
+// Collapse all patient timeline cards
+function collapseAllPatientTimelines() {
+    const cards = document.querySelectorAll('.patient-timeline-card');
+    cards.forEach(card => {
+        card.classList.add('collapsed');
+        const indicator = card.querySelector('.collapse-indicator');
+        if (indicator) indicator.style.transform = 'rotate(-90deg)';
+        
+        // Update collapse state
+        const patientId = card.id;
+        if (window.timelineCollapseState) {
+            window.timelineCollapseState[patientId] = true;
+        }
+    });
+}
+
+// Expand all task subtasks within timelines
+function expandAllTimelines() {
+    // Expand all patient timeline cards
+    expandAllPatientTimelines();
     
     // Also expand all task subtasks
     document.querySelectorAll('.task-subtasks').forEach(subtasks => {
@@ -1538,13 +1675,10 @@ function expandAllTimelines() {
     });
 }
 
-// Collapse all timelines
+// Collapse all task subtasks within timelines
 function collapseAllTimelines() {
     // Collapse all patient timeline cards
-    const cards = document.querySelectorAll('.patient-timeline-card');
-    cards.forEach(card => {
-        card.classList.add('collapsed');
-    });
+    collapseAllPatientTimelines();
     
     // Also collapse all task subtasks
     document.querySelectorAll('.task-subtasks').forEach(subtasks => {
@@ -1555,6 +1689,33 @@ function collapseAllTimelines() {
 }
 
 
+
+// Navigate to a specific patient's timeline from other tabs
+function navigateToPatientTimeline(patientName, patientIndex) {
+    // Switch to timelines tab
+    switchTab('timelines');
+    
+    // Wait for DOM to update then scroll to patient
+    setTimeout(() => {
+        const patientId = `patient-${patientIndex}`;
+        const card = document.getElementById(patientId);
+        if (card) {
+            // Expand the card if collapsed
+            card.classList.remove('collapsed');
+            const indicator = card.querySelector('.collapse-indicator');
+            if (indicator) indicator.style.transform = 'none';
+            
+            // Scroll to the card
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight briefly
+            card.style.boxShadow = '0 0 20px rgba(79, 195, 247, 0.8)';
+            setTimeout(() => {
+                card.style.boxShadow = '';
+            }, 2000);
+        }
+    }, 300);
+}
 
 // Filter timelines
 function filterTimelines(filter) {

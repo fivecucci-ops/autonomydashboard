@@ -2292,6 +2292,68 @@ body.dark-mode {
     color: #28a745; /* Green for checked checkboxes */
 }
 
+/* Timeline Header and Controls */
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.dark-mode .timeline-header {
+    background: #2a2a2a;
+}
+
+.timeline-legend {
+    display: flex;
+    gap: 20px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.bullet-demo {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.bullet-demo.not-started {
+    background: #ff7733;  /* Orange */
+}
+
+.bullet-demo.partial {
+    background: #ffd700;  /* Yellow/Gold */
+}
+
+.bullet-demo.complete {
+    background: #28a745;  /* Green */
+}
+
+.timeline-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.timeline-controls .btn-sm {
+    padding: 5px 12px;
+    font-size: 13px;
+}
+
 /* Timeline step colors - Checkbox Status Colors */
 /* Unchecked/Incomplete steps: Orange */
 .timeline-step.pending .bullet {
@@ -2584,6 +2646,101 @@ body.dark-mode {
 
 .task-item.expanded .task-expand {
     transform: rotate(180deg);
+}
+
+/* Enhanced Task Item Styling for Timeline */
+.task-item.not-started {
+    border-left: 4px solid #ff7733;
+}
+
+.task-item.partial {
+    border-left: 4px solid #ffd700;
+}
+
+.task-item.complete {
+    border-left: 4px solid #28a745;
+}
+
+.task-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.task-number.not-started {
+    background: #ff7733;
+}
+
+.task-number.partial {
+    background: #ffd700;
+    color: #333;
+}
+
+.task-number.complete {
+    background: #28a745;
+}
+
+/* Subtask and Sub-subtask Styling */
+.subtask-list {
+    list-style: none;
+    padding: 10px 20px;
+    margin: 0;
+}
+
+.subtask-item {
+    padding: 8px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.subtask-item input[type="checkbox"] {
+    margin-top: 2px;
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.subtask-item label {
+    cursor: pointer;
+    flex: 1;
+    font-size: 14px;
+}
+
+.sub-subtask-list {
+    list-style: none;
+    padding: 5px 0 0 25px;
+    margin: 0;
+}
+
+.sub-subtask-item {
+    padding: 5px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #666;
+}
+
+.dark-mode .sub-subtask-item {
+    color: #aaa;
+}
+
+.sub-subtask-item input[type="checkbox"] {
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+}
+
+.sub-subtask-item label {
+    cursor: pointer;
 }
 
 /* Subtasks */
