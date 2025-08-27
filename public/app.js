@@ -1539,10 +1539,15 @@ function initializePatientTasks() {
             id: 'rxnt', 
             name: 'RXNT', 
             subtasks: [
-                { name: 'Prescription Written', complete: false },
-                { name: 'Sent to Pharmacy', complete: false },
-                { name: 'Delivery Confirmed', complete: false },
-                { name: 'Patient Educated', complete: false }
+                { name: 'Client Information Inputted', complete: false },
+                { 
+                    name: 'Prescription', 
+                    complete: false,
+                    subSubtasks: [
+                        { name: 'Pending', complete: false },
+                        { name: 'Sent', complete: false }
+                    ]
+                }
             ]
         },
         { 
