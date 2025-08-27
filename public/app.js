@@ -1460,7 +1460,7 @@ function initializePatientTasks() {
             name: 'Quickbooks Invoice', 
             subtasks: [
                 { name: 'Sent Invoice', complete: false },
-                { name: 'Paid Invoice', complete: false },
+                { name: 'Paid via Quickbooks', complete: false },
                 { name: 'Paid via Check', complete: false }
             ]
         },
@@ -1640,8 +1640,8 @@ function generateSubtasks(task, patientId, taskIndex) {
                 </li>
             `;
             
-            // Add "or" separator between "Paid Invoice" and "Paid via Check"
-            if (subtask.name === 'Paid Invoice') {
+            // Add "or" separator between "Paid via Quickbooks" and "Paid via Check"
+            if (subtask.name === 'Paid via Quickbooks') {
                 html += '<li class="subtask-separator">or</li>';
             }
         });
@@ -1760,13 +1760,13 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     if (task.id === 'invoice') {
         // Special logic for Quickbooks Invoice
         const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
-        const paidInvoice = task.subtasks.find(s => s.name === 'Paid Invoice')?.complete || false;
+        const paidViaQuickbooks = task.subtasks.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
         const paidViaCheck = task.subtasks.find(s => s.name === 'Paid via Check')?.complete || false;
         
         totalSubtasks = task.subtasks.length;
         
-        // Task is complete if: Sent Invoice + (Paid Invoice OR Paid via Check)
-        if (sentInvoice && (paidInvoice || paidViaCheck)) {
+        // Task is complete if: Sent Invoice + (Paid via Quickbooks OR Paid via Check)
+        if (sentInvoice && (paidViaQuickbooks || paidViaCheck)) {
             completedSubtasks = totalSubtasks; // Mark as fully complete
         } else if (sentInvoice) {
             completedSubtasks = 1; // Partially complete
@@ -1867,13 +1867,13 @@ function toggleSubSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
     if (task.id === 'invoice') {
         // Special logic for Quickbooks Invoice
         const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
-        const paidInvoice = task.subtasks.find(s => s.name === 'Paid Invoice')?.complete || false;
+        const paidViaQuickbooks = task.subtasks.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
         const paidViaCheck = task.subtasks.find(s => s.name === 'Paid via Check')?.complete || false;
         
         totalSubtasks = task.subtasks.length;
         
-        // Task is complete if: Sent Invoice + (Paid Invoice OR Paid via Check)
-        if (sentInvoice && (paidInvoice || paidViaCheck)) {
+        // Task is complete if: Sent Invoice + (Paid via Quickbooks OR Paid via Check)
+        if (sentInvoice && (paidViaQuickbooks || paidViaCheck)) {
             completedSubtasks = totalSubtasks; // Mark as fully complete
         } else if (sentInvoice) {
             completedSubtasks = 1; // Partially complete
