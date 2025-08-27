@@ -1460,8 +1460,14 @@ function initializePatientTasks() {
             name: 'Quickbooks Invoice', 
             subtasks: [
                 { name: 'Sent Invoice', complete: false },
-                { name: 'Paid via Quickbooks', complete: false },
-                { name: 'Paid via Check', complete: false }
+                { 
+                    name: 'Payment Received', 
+                    complete: false,
+                    subSubtasks: [
+                        { name: 'Paid via Quickbooks', complete: false },
+                        { name: 'Paid via Check', complete: false }
+                    ]
+                }
             ]
         },
         { 
@@ -1640,9 +1646,26 @@ function generateSubtasks(task, patientId, taskIndex) {
                 </li>
             `;
             
-            // Add "or" separator between "Paid via Quickbooks" and "Paid via Check"
-            if (subtask.name === 'Paid via Quickbooks') {
-                html += '<li class="subtask-separator">or</li>';
+            // Add sub-subtasks if they exist (like payment options under "Payment Received")
+            if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
+                html += '<ul class="sub-subtask-list">';
+                subtask.subSubtasks.forEach((subSubtask, subSubIndex) => {
+                    html += `
+                        <li class="sub-subtask-item">
+                            <input type="checkbox" 
+                                id="sub-subtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}"
+                                ${subSubtask.complete ? 'checked' : ''}
+                                onchange="toggleSubSubtask('${patientId}', ${taskIndex}, ${subIndex}, ${subSubIndex})">
+                            <label for="sub-subtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}">${subSubtask.name}</label>
+                        </li>
+                    `;
+                    
+                    // Add "or" separator between "Paid via Quickbooks" and "Paid via Check"
+                    if (subSubtask.name === 'Paid via Quickbooks') {
+                        html += '<li class="subtask-separator">or</li>';
+                    }
+                });
+                html += '</ul>';
             }
         });
     } else {
@@ -1693,18 +1716,25 @@ function calculateProgress(patientId) {
         // Special logic for Quickbooks Invoice task
         if (task.id === 'invoice') {
             const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
-            const paidInvoice = task.subtasks.find(s => s.name === 'Paid Invoice')?.complete || false;
-            const paidViaCheck = task.subtasks.find(s => s.name === 'Paid via Check')?.complete || false;
+            const paymentReceived = task.subtasks.find(s => s.name === 'Payment Received');
+            const paidViaQuickbooks = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
+            const paidViaCheck = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Check')?.complete || false;
             
             // Count all subtasks for total
             task.subtasks.forEach(subtask => {
                 totalItems++;
+                // Count sub-subtasks too
+                if (subtask.subSubtasks) {
+                    subtask.subSubtasks.forEach(subSubtask => {
+                        totalItems++;
+                    });
+                }
             });
             
             // Count completed items with special logic
             if (sentInvoice) {
                 completedItems++; // Sent Invoice counts
-                if (paidInvoice || paidViaCheck) {
+                if (paidViaQuickbooks || paidViaCheck) {
                     completedItems++; // Either payment method counts
                 }
             }
@@ -1760,8 +1790,9 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     if (task.id === 'invoice') {
         // Special logic for Quickbooks Invoice
         const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
-        const paidViaQuickbooks = task.subtasks.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
-        const paidViaCheck = task.subtasks.find(s => s.name === 'Paid via Check')?.complete || false;
+        const paymentReceived = task.subtasks.find(s => s.name === 'Payment Received');
+        const paidViaQuickbooks = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
+        const paidViaCheck = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Check')?.complete || false;
         
         totalSubtasks = task.subtasks.length;
         
@@ -1867,8 +1898,9 @@ function toggleSubSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
     if (task.id === 'invoice') {
         // Special logic for Quickbooks Invoice
         const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
-        const paidViaQuickbooks = task.subtasks.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
-        const paidViaCheck = task.subtasks.find(s => s.name === 'Paid via Check')?.complete || false;
+        const paymentReceived = task.subtasks.find(s => s.name === 'Payment Received');
+        const paidViaQuickbooks = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
+        const paidViaCheck = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Check')?.complete || false;
         
         totalSubtasks = task.subtasks.length;
         
