@@ -1547,7 +1547,7 @@ function initializePatientTasks() {
                         { name: 'Pending', complete: false },
                         { name: 'Sent', complete: false }
                     ],
-                    note: 'Dose Type: [Auto-populated from Patient Info]'
+                    note: 'Dose Type: ${patient.doseLevel || "Not specified"}'
                 }
             ]
         },
@@ -1656,6 +1656,8 @@ function generateImprovedTimelineSteps(patient, index) {
 
 // Generate subtasks HTML
 function generateSubtasks(task, patientId, taskIndex) {
+    // Get patient data for dynamic notes
+    const patient = window.patientsData?.[patientId] || {};
     let html = '<ul class="subtask-list">';
     
     // Special handling for Quickbooks Invoice task to add "or" between payment options
@@ -1741,7 +1743,12 @@ function generateSubtasks(task, patientId, taskIndex) {
             
             // Add note if it exists (like dose type information)
             if (subtask.note) {
-                html += `<div class="task-note">${subtask.note}</div>`;
+                // Evaluate template strings in notes (like ${patient.doseLevel})
+                const evaluatedNote = subtask.note.replace(/\${([^}]+)}/g, (match, path) => {
+                    const value = path.split('.').reduce((obj, key) => obj?.[key], patient);
+                    return value || 'Not specified';
+                });
+                html += `<div class="task-note">${evaluatedNote}</div>`;
             }
         });
     }
