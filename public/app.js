@@ -1572,10 +1572,8 @@ function initializePatientTasks() {
             id: 'followup', 
             name: 'Follow up Form', 
             subtasks: [
-                { name: 'Form Initiated', complete: false },
-                { name: 'Data Collected', complete: false },
-                { name: 'Signatures Obtained', complete: false },
-                { name: 'Submitted to Office', complete: false }
+                { name: 'Completed', complete: false },
+                { name: 'Sent to EOLOA', complete: false }
             ]
         }
     ];
