@@ -1769,16 +1769,8 @@ function calculateProgress(patientId) {
             const paidViaQuickbooks = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
             const paidViaCheck = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Check')?.complete || false;
             
-            // Count all subtasks for total
-            task.subtasks.forEach(subtask => {
-                totalItems++;
-                // Count sub-subtasks too
-                if (subtask.subSubtasks) {
-                    subtask.subSubtasks.forEach(subSubtask => {
-                        totalItems++;
-                    });
-                }
-            });
+            // Count subtasks for total (not sub-subtasks)
+            totalItems += task.subtasks.length;
             
             // Count completed items with special logic
             if (sentInvoice) {
@@ -1791,14 +1783,22 @@ function calculateProgress(patientId) {
             // Standard logic for other tasks
             task.subtasks.forEach(subtask => {
                 totalItems++;
-                if (subtask.complete) completedItems++;
                 
-                // Count sub-subtasks too
-                if (subtask.subSubtasks) {
+                // Check if subtask is complete (including sub-subtasks)
+                if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
+                    // For subtasks with sub-subtasks, check if all sub-subtasks are complete
+                    let allSubSubtasksComplete = true;
                     subtask.subSubtasks.forEach(subSubtask => {
-                        totalItems++;
-                        if (subSubtask.complete) completedItems++;
+                        if (!subSubtask.complete) {
+                            allSubSubtasksComplete = false;
+                        }
                     });
+                    if (allSubSubtasksComplete) {
+                        completedItems++;
+                    }
+                } else {
+                    // For regular subtasks without sub-subtasks
+                    if (subtask.complete) completedItems++;
                 }
             });
         }
