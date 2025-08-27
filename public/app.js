@@ -2228,10 +2228,32 @@ function filterTimelines(filter) {
         if (filter === 'all') {
             card.style.display = 'block';
         } else if (filter === 'incomplete') {
-            const progress = calculateProgress(card.id);
-            card.style.display = progress < 100 ? 'block' : 'none';
+            // Check if this patient has any incomplete tasks (yellow or red)
+            const hasIncompleteTasks = hasIncompleteTasksForPatient(card.id);
+            card.style.display = hasIncompleteTasks ? 'block' : 'none';
         }
     });
+}
+
+// Check if a patient has any incomplete tasks (yellow or red status)
+function hasIncompleteTasksForPatient(patientId) {
+    const tasks = window.taskCompletionData[patientId];
+    if (!tasks) return false;
+    
+    // Check each task for incomplete status
+    for (let taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
+        const task = tasks[taskIndex];
+        const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
+        
+        if (taskItem) {
+            // Check if task has yellow (partial) or red (not-started) status
+            if (taskItem.classList.contains('partial') || taskItem.classList.contains('not-started')) {
+                return true; // Found an incomplete task
+            }
+        }
+    }
+    
+    return false; // All tasks are complete (green)
 }
 
 // Toggle subtasks or details
