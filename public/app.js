@@ -1490,8 +1490,7 @@ function initializePatientTasks() {
             name: 'Visit 1', 
             subtasks: [
                 { name: 'Scheduled', complete: false },
-                { name: 'Assessment Completed', complete: false },
-                { name: 'Care Plan Created', complete: false }
+                { name: 'Complete', complete: false }
             ]
         },
         { 
