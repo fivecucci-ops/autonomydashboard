@@ -1484,7 +1484,7 @@ body.dark-mode {
 
 .timelines-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 20px;
     width: 100%;
     align-items: start;
@@ -1492,8 +1492,8 @@ body.dark-mode {
 
 .patient-timeline-card {
     width: 100%;
-    min-width: 350px;
-    max-width: 450px;
+    min-width: 400px;
+    max-width: 550px;
     margin: 0;
     border: 1px solid #ddd;
     border-radius: 8px;
