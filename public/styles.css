@@ -1484,7 +1484,7 @@ body.dark-mode {
 
 .timelines-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(3, 1fr); /* Exactly 3 columns */
     gap: 20px;
     width: 100%;
     align-items: start;
@@ -1600,28 +1600,10 @@ body.dark-mode {
     border: 1px solid #333;
 }
 
-/* Responsive design for timeline cards */
-@media (min-width: 1200px) {
+/* Mobile responsive - only change to single column on very small screens */
+@media (max-width: 800px) {
     .timelines-container {
-        grid-template-columns: repeat(4, 1fr); /* 4 columns on very wide screens */
-    }
-}
-
-@media (min-width: 900px) and (max-width: 1199px) {
-    .timelines-container {
-        grid-template-columns: repeat(3, 1fr); /* 3 columns on wide screens */
-    }
-}
-
-@media (min-width: 600px) and (max-width: 899px) {
-    .timelines-container {
-        grid-template-columns: repeat(2, 1fr); /* 2 columns on medium screens */
-    }
-}
-
-@media (max-width: 599px) {
-    .timelines-container {
-        grid-template-columns: 1fr; /* 1 column on small screens */
+        grid-template-columns: 1fr; /* Single column on very small screens */
         padding: 0 10px;
     }
     
@@ -1629,16 +1611,6 @@ body.dark-mode {
         min-width: 100%;
         max-width: 100%;
         margin: 10px 0;
-    }
-    
-    .task-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-    
-    .task-info {
-        width: 100%;
     }
 }
 
