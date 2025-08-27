@@ -1484,19 +1484,22 @@ body.dark-mode {
 
 .timelines-container {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column; /* Stack cards vertically for better readability */
     gap: 20px;
-    align-items: flex-start;
+    align-items: stretch; /* Stretch cards to full width */
+    width: 100%;
 }
 
 .patient-timeline-card {
-    flex: 1 1 300px; /* Adjusted width for side-by-side */
-    max-width: 400px;
+    flex: 1 1 500px; /* Increased minimum width for better content display */
+    min-width: 500px; /* Ensure minimum width */
+    max-width: 800px; /* Increased max width to prevent content cutoff */
     margin: 0;
     border: 1px solid #ddd;
     border-radius: 8px;
     background: #f9f9f9;
     transition: all 0.3s ease;
+    overflow: visible; /* Ensure content isn't cut off */
 }
 
 .patient-timeline-card.collapsed {
@@ -1592,6 +1595,29 @@ body.dark-mode {
 .dark-mode .patient-timeline-card {
     background: #1e1e1e;
     border: 1px solid #333;
+}
+
+/* Responsive design for timeline cards */
+@media (max-width: 768px) {
+    .patient-timeline-card {
+        min-width: 100%;
+        max-width: 100%;
+        margin: 10px 0;
+    }
+    
+    .timelines-container {
+        padding: 0 10px;
+    }
+    
+    .task-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .task-info {
+        width: 100%;
+    }
 }
 
 .dark-mode .patient-header {
@@ -2590,6 +2616,8 @@ body.dark-mode {
     cursor: pointer;
     background: #f8f9fa;
     transition: background 0.3s;
+    width: 100%; /* Ensure full width */
+    min-width: 0; /* Allow flex shrinking */
 }
 
 .task-header:hover {
@@ -2624,6 +2652,8 @@ body.dark-mode {
 
 .task-info {
     flex: 1;
+    min-width: 0; /* Allow text to wrap properly */
+    word-wrap: break-word; /* Ensure long text wraps */
 }
 
 .task-name {
@@ -2692,6 +2722,8 @@ body.dark-mode {
     list-style: none;
     padding: 10px 20px;
     margin: 0;
+    width: 100%; /* Ensure full width */
+    box-sizing: border-box; /* Include padding in width calculation */
 }
 
 .subtask-item {
