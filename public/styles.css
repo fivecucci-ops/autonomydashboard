@@ -2640,7 +2640,7 @@ body.dark-mode {
 
 .task-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* Allow for wrapped text */
     padding: 16px 20px;
     cursor: pointer;
     background: transparent;
@@ -2684,7 +2684,8 @@ body.dark-mode {
 .task-info {
     flex: 1;
     min-width: 0; /* Allow text to wrap properly */
-    word-wrap: break-word; /* Ensure long text wraps */
+    /* Allow natural text wrapping */
+    /* white-space: normal; is default */
     writing-mode: horizontal-tb; /* Force horizontal text orientation */
     text-orientation: mixed; /* Maintain normal text direction */
 }
@@ -2694,9 +2695,11 @@ body.dark-mode {
     font-size: 1.05em;
     color: #333;
     margin-bottom: 5px;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    hyphens: auto;
+    /* Allow text to wrap naturally */
+    /* white-space: normal; is default */
+    hyphens: none; /* Prevent hyphenation like "In-voices" */
+    overflow-wrap: break-word; /* Allow long words to break if they don't fit */
+    word-break: normal; /* Ensure words only break at normal break points */
     writing-mode: horizontal-tb; /* Force horizontal text */
     text-orientation: mixed; /* Normal text direction */
 }
@@ -2777,6 +2780,21 @@ body.dark-mode {
     margin-top: 2px;
     cursor: pointer;
     width: 16px;
+}
+
+.subtask-separator {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    font-weight: 500;
+    padding: 8px 0;
+    margin: 4px 0;
+    font-size: 14px;
+}
+
+.dark-mode .subtask-separator {
+    color: #aaa;
+}
     height: 16px;
 }
 
@@ -2983,6 +3001,108 @@ body.dark-mode {
 .dark-mode .patient-card {
     background: #1e1e1e;
 } 
+
+/* Active Data cards */
+.active-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.active-view-toggle {
+    display: flex;
+    gap: 8px;
+}
+
+.active-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.active-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    border: 1px solid #ececec;
+    overflow: hidden;
+}
+
+.dark-mode .active-card {
+    background: #1e1e1e;
+    border-color: #2a2a2a;
+}
+
+.active-card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    position: relative;
+}
+
+.dark-mode .active-card-header {
+    border-bottom-color: #2a2a2a;
+}
+
+.active-card-title {
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+.active-card-meta {
+    color: #666;
+    font-size: 13px;
+}
+
+.dark-mode .active-card-meta {
+    color: #aaa;
+}
+
+.active-card-actions {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    display: flex;
+    gap: 6px;
+}
+
+.active-card-body {
+    padding: 12px 16px 16px 16px;
+}
+
+.active-field {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+.active-field-label {
+    color: #777;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.dark-mode .active-field-label {
+    color: #9a9a9a;
+}
+
+.active-field-value {
+    color: #222;
+}
+
+.dark-mode .active-field-value {
+    color: #e0e0e0;
+}
+
+@media (max-width: 520px) {
+    .active-field {
+        grid-template-columns: 1fr;
+    }
+}
 
 .fake-link {
     color: #007bff;

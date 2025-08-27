@@ -226,6 +226,96 @@ function generatePatientTable(data) {
 }
 
 /**
+ * Generate modern card layout for Active Data that shows only populated fields
+ * and duplicates patient name in header and details.
+ */
+function generateActivePatientCards(data) {
+    if (!data || data.length === 0) {
+        return '<p>No data available.</p>';
+    }
+
+    const preferredFieldOrder = [
+        'Patient Name', 'DOB', 'Age', 'City', 'Phone Number', 'Email',
+        'CP Doctor', 'Hospice', 'PAID', 'invoice amount', 'Check list',
+        'Ingestion Date', 'Ingestion Location', 'Consent Received',
+        'Medical Records', 'Physician follow up form', 'EOLOA State',
+        'Death Certificate', 'Referred From'
+    ];
+
+    const formatValue = (label, value) => {
+        if (!value || value === '-' || value === '0') return '';
+        if (label === 'Phone Number') {
+            return `<a class="contact-link" href="tel:${value}">📞 ${value}</a>`;
+        }
+        if (label === 'Email') {
+            return `<a class="contact-link" href="mailto:${value}">✉️ ${value}</a>`;
+        }
+        if (label === 'PAID') {
+            const v = String(value).toLowerCase();
+            if (v === 'yes') return '✅ Yes';
+            if (v === 'no') return '❌ No';
+        }
+        if (label === 'City') {
+            return value;
+        }
+        return value;
+    };
+
+    const buildFieldsHtml = (patient) => {
+        const city = patient['City'] || patient.city || patient['Area'];
+        const withComputed = { ...patient, 'City': city };
+
+        let html = '';
+        preferredFieldOrder.forEach((label) => {
+            if (label === 'Patient Name') return; // name handled separately but duplicated later
+            const raw = withComputed[label];
+            const value = formatValue(label, raw);
+            if (value) {
+                html += `
+                    <div class="active-field">
+                        <div class="active-field-label">${label}</div>
+                        <div class="active-field-value">${value}</div>
+                    </div>
+                `;
+            }
+        });
+        return html || '<div class="active-field"><div class="active-field-value">No additional info</div></div>';
+    };
+
+    let html = '<div class="active-cards-grid">';
+    data.forEach((patient, index) => {
+        const name = patient['Patient Name'] || patient.patientName || 'Unknown';
+        const city = patient['City'] || patient.city || patient['Area'] || '';
+        const age = patient['Age'] || '';
+
+        html += `
+            <div class="active-card">
+                <div class="active-card-header">
+                    <div class="active-card-title">
+                        <a href="#" onclick="showPatientDetail(${index}); return false;" class="patient-name-link">${name}</a>
+                    </div>
+                    <div class="active-card-meta">${age ? `${age} yrs` : ''}${age && city ? ' · ' : ''}${city || ''}</div>
+                    <div class="active-card-actions">
+                        <button class="patient-action-btn pin" onclick="pinPatient(${index})" title="Pin patient">📌</button>
+                        <button class="patient-action-btn task" onclick="createTaskForPatient(${index})" title="Create task">📝</button>
+                        <button class="patient-action-btn calendar" onclick="createEventForPatient(${index})" title="Create calendar event">📅</button>
+                    </div>
+                </div>
+                <div class="active-card-body">
+                    <div class="active-field">
+                        <div class="active-field-label">Patient Name</div>
+                        <div class="active-field-value">${name}</div>
+                    </div>
+                    ${buildFieldsHtml(patient)}
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    return html;
+}
+
+/**
  * Generate progress indicator based on patient data
  */
 function generateProgressIndicator(patient) {
@@ -262,6 +352,37 @@ function getStatusClass(status) {
     if (statusLower === 'pending') return 'status-pending';
     if (statusLower.includes('progress')) return 'status-progress';
     return 'status-default';
+}
+
+// View toggles for Active Data
+function switchToTableView() {
+    const patients = currentData.active || [];
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="active-header">
+            <h1>Active Patients (${patients.length})</h1>
+            <div class="active-view-toggle">
+                <button class="btn-primary" onclick="switchToTableView()">Table</button>
+                <button class="btn-secondary" onclick="switchToCardView()">Cards</button>
+            </div>
+        </div>
+        ${patients.length > 0 ? generatePatientTable(patients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+    `;
+}
+
+function switchToCardView() {
+    const patients = currentData.active || [];
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="active-header">
+            <h1>Active Patients (${patients.length})</h1>
+            <div class="active-view-toggle">
+                <button class="btn-secondary" onclick="switchToTableView()">Table</button>
+                <button class="btn-primary" onclick="switchToCardView()">Cards</button>
+            </div>
+        </div>
+        ${patients.length > 0 ? generateActivePatientCards(patients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+    `;
 }
 
 /**
@@ -384,8 +505,14 @@ async function loadActivePatients() {
         // Create patient table
         const content = document.getElementById('content');
         content.innerHTML = `
-            <h1>Active Patients (${localPatients.length}) - Sorted A-Z by First Name</h1>
-            ${localPatients.length > 0 ? generatePatientTable(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+            <div class="active-header">
+                <h1>Active Patients (${localPatients.length})</h1>
+                <div class="active-view-toggle">
+                    <button class="btn-secondary" onclick="switchToTableView()">Table</button>
+                    <button class="btn-primary" onclick="switchToCardView()">Cards</button>
+                </div>
+            </div>
+            ${localPatients.length > 0 ? generateActivePatientCards(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
         `;
         
         setStatus('Active patients loaded successfully', 'success');
@@ -407,8 +534,14 @@ async function loadActivePatients() {
         
         const content = document.getElementById('content');
         content.innerHTML = `
-            <h1>Active Patients (${localPatients.length}) - Sorted A-Z by First Name</h1>
-            ${localPatients.length > 0 ? generatePatientTable(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+            <div class="active-header">
+                <h1>Active Patients (${localPatients.length})</h1>
+                <div class="active-view-toggle">
+                    <button class="btn-secondary" onclick="switchToTableView()">Table</button>
+                    <button class="btn-primary" onclick="switchToCardView()">Cards</button>
+                </div>
+            </div>
+            ${localPatients.length > 0 ? generateActivePatientCards(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
         `;
     }
 }
@@ -1327,8 +1460,27 @@ function initializePatientTasks() {
             ]
         },
         { 
+            id: 'records', 
+            name: 'Medical Records', 
+            subtasks: [
+                { name: 'Records Requested', complete: false },
+                { name: 'Records Received', complete: false },
+                { name: 'Records Reviewed', complete: false },
+                { name: 'Filed in System', complete: false }
+            ]
+        },
+        { 
+            id: 'visit1', 
+            name: 'Visit 1', 
+            subtasks: [
+                { name: 'Scheduled', complete: false },
+                { name: 'Assessment Completed', complete: false },
+                { name: 'Care Plan Created', complete: false }
+            ]
+        },
+        { 
             id: 'visit2', 
-            name: 'Follow-up Visit', 
+            name: 'Visit 2', 
             subtasks: [
                 { name: 'Scheduled', complete: false },
                 { name: 'Completed', complete: false },
@@ -1336,12 +1488,12 @@ function initializePatientTasks() {
             ]
         },
         { 
-            id: 'visit1', 
-            name: 'Initial Visit', 
+            id: 'attending', 
+            name: 'Attending Form', 
             subtasks: [
-                { name: 'Scheduled', complete: false },
-                { name: 'Assessment Completed', complete: false },
-                { name: 'Care Plan Created', complete: false }
+                { name: 'Requirements Verified', complete: false },
+                { name: 'Documentation Complete', complete: false },
+                { name: 'Approved by Attending', complete: false }
             ]
         },
         { 
@@ -1354,32 +1506,13 @@ function initializePatientTasks() {
             ]
         },
         { 
-            id: 'checklist', 
-            name: 'Attending Checklist', 
-            subtasks: [
-                { name: 'Requirements Verified', complete: false },
-                { name: 'Documentation Complete', complete: false },
-                { name: 'Approved by Attending', complete: false }
-            ]
-        },
-        { 
-            id: 'prescription', 
-            name: 'Send Prescription', 
+            id: 'rxnt', 
+            name: 'RXNT', 
             subtasks: [
                 { name: 'Prescription Written', complete: false },
                 { name: 'Sent to Pharmacy', complete: false },
                 { name: 'Delivery Confirmed', complete: false },
                 { name: 'Patient Educated', complete: false }
-            ]
-        },
-        { 
-            id: 'records', 
-            name: 'Medical Records', 
-            subtasks: [
-                { name: 'Records Requested', complete: false },
-                { name: 'Records Received', complete: false },
-                { name: 'Records Reviewed', complete: false },
-                { name: 'Filed in System', complete: false }
             ]
         },
         { 
@@ -1393,7 +1526,7 @@ function initializePatientTasks() {
         },
         { 
             id: 'ingestion', 
-            name: 'Medication Ingestion', 
+            name: 'Ingestion', 
             subtasks: [
                 { name: 'Patient Prepared', complete: false },
                 { name: 'Medication Administered', complete: false },
@@ -1403,7 +1536,7 @@ function initializePatientTasks() {
         },
         { 
             id: 'followup', 
-            name: 'Follow-up Form', 
+            name: 'Follow up Form', 
             subtasks: [
                 { name: 'Form Initiated', complete: false },
                 { name: 'Data Collected', complete: false },
@@ -1423,19 +1556,45 @@ function generateImprovedTimelineSteps(patient, index) {
     let html = '<div class="task-list">';
     
     tasks.forEach((task, taskIndex) => {
-        const completedSubtasks = task.subtasks.filter(s => s.complete).length;
-        const totalSubtasks = task.subtasks.length;
-        let statusClass, statusText;
+        let completedSubtasks, totalSubtasks, statusClass, statusText;
         
-        if (completedSubtasks === 0) {
-            statusClass = 'not-started';
-            statusText = 'Not Started';
-        } else if (completedSubtasks === totalSubtasks) {
-            statusClass = 'complete';
-            statusText = 'Complete';
+        // Special logic for Quickbooks Invoice task
+        if (task.id === 'invoice') {
+            const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
+            const paidInvoice = task.subtasks.find(s => s.name === 'Paid Invoice')?.complete || false;
+            const paidViaCheck = task.subtasks.find(s => s.name === 'Paid via Check')?.complete || false;
+            
+            totalSubtasks = task.subtasks.length;
+            
+            // Task is complete if: Sent Invoice + (Paid Invoice OR Paid via Check)
+            if (sentInvoice && (paidInvoice || paidViaCheck)) {
+                completedSubtasks = totalSubtasks;
+                statusClass = 'complete';
+                statusText = 'Complete';
+            } else if (sentInvoice) {
+                completedSubtasks = 1;
+                statusClass = 'partial';
+                statusText = 'Partially Complete';
+            } else {
+                completedSubtasks = 0;
+                statusClass = 'not-started';
+                statusText = 'Not Started';
+            }
         } else {
-            statusClass = 'partial';
-            statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+            // Standard logic for other tasks
+            completedSubtasks = task.subtasks.filter(s => s.complete).length;
+            totalSubtasks = task.subtasks.length;
+            
+            if (completedSubtasks === 0) {
+                statusClass = 'not-started';
+                statusText = 'Not Started';
+            } else if (completedSubtasks === totalSubtasks) {
+                statusClass = 'complete';
+                statusText = 'Complete';
+            } else {
+                statusClass = 'partial';
+                statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+            }
         }
         
         html += `
@@ -1462,17 +1621,40 @@ function generateImprovedTimelineSteps(patient, index) {
 // Generate subtasks HTML
 function generateSubtasks(task, patientId, taskIndex) {
     let html = '<ul class="subtask-list">';
-    task.subtasks.forEach((subtask, subIndex) => {
-        html += `
-            <li class="subtask-item">
-                <input type="checkbox" 
-                    id="subtask-${patientId}-${taskIndex}-${subIndex}"
-                    ${subtask.complete ? 'checked' : ''}
-                    onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex})">
-                <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
-            </li>
-        `;
-    });
+    
+    // Special handling for Quickbooks Invoice task to add "or" between payment options
+    if (task.id === 'invoice') {
+        task.subtasks.forEach((subtask, subIndex) => {
+            html += `
+                <li class="subtask-item">
+                    <input type="checkbox" 
+                        id="subtask-${patientId}-${taskIndex}-${subIndex}"
+                        ${subtask.complete ? 'checked' : ''}
+                        onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex})">
+                    <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
+                </li>
+            `;
+            
+            // Add "or" separator between "Paid Invoice" and "Paid via Check"
+            if (subtask.name === 'Paid Invoice') {
+                html += '<li class="subtask-separator">or</li>';
+            }
+        });
+    } else {
+        // Standard handling for other tasks
+        task.subtasks.forEach((subtask, subIndex) => {
+            html += `
+                <li class="subtask-item">
+                    <input type="checkbox" 
+                        id="subtask-${patientId}-${taskIndex}-${subIndex}"
+                        ${subtask.complete ? 'checked' : ''}
+                        onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex})">
+                    <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
+                </li>
+            `;
+        });
+    }
+    
     html += '</ul>';
     return html;
 }
@@ -1486,18 +1668,39 @@ function calculateProgress(patientId) {
     let completedItems = 0;
     
     tasks.forEach(task => {
-        task.subtasks.forEach(subtask => {
-            totalItems++;
-            if (subtask.complete) completedItems++;
+        // Special logic for Quickbooks Invoice task
+        if (task.id === 'invoice') {
+            const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
+            const paidInvoice = task.subtasks.find(s => s.name === 'Paid Invoice')?.complete || false;
+            const paidViaCheck = task.subtasks.find(s => s.name === 'Paid via Check')?.complete || false;
             
-            // Count sub-subtasks too
-            if (subtask.subSubtasks) {
-                subtask.subSubtasks.forEach(subSubtask => {
-                    totalItems++;
-                    if (subSubtask.complete) completedItems++;
-                });
+            // Count all subtasks for total
+            task.subtasks.forEach(subtask => {
+                totalItems++;
+            });
+            
+            // Count completed items with special logic
+            if (sentInvoice) {
+                completedItems++; // Sent Invoice counts
+                if (paidInvoice || paidViaCheck) {
+                    completedItems++; // Either payment method counts
+                }
             }
-        });
+        } else {
+            // Standard logic for other tasks
+            task.subtasks.forEach(subtask => {
+                totalItems++;
+                if (subtask.complete) completedItems++;
+                
+                // Count sub-subtasks too
+                if (subtask.subSubtasks) {
+                    subtask.subSubtasks.forEach(subSubtask => {
+                        totalItems++;
+                        if (subSubtask.complete) completedItems++;
+                    });
+                }
+            });
+        }
     });
     
     return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -1528,14 +1731,33 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     const checked = !task.subtasks[subtaskIndex].complete;
     task.subtasks[subtaskIndex].complete = checked;
     
-    // Recalculate task completion status
+    // Recalculate task completion status with special logic for Quickbooks Invoice
     let completedSubtasks = 0;
     let totalSubtasks = 0;
     
-    task.subtasks.forEach(subtask => {
-        totalSubtasks++;
-        if (subtask.complete) completedSubtasks++;
-    });
+    if (task.id === 'invoice') {
+        // Special logic for Quickbooks Invoice
+        const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
+        const paidInvoice = task.subtasks.find(s => s.name === 'Paid Invoice')?.complete || false;
+        const paidViaCheck = task.subtasks.find(s => s.name === 'Paid via Check')?.complete || false;
+        
+        totalSubtasks = task.subtasks.length;
+        
+        // Task is complete if: Sent Invoice + (Paid Invoice OR Paid via Check)
+        if (sentInvoice && (paidInvoice || paidViaCheck)) {
+            completedSubtasks = totalSubtasks; // Mark as fully complete
+        } else if (sentInvoice) {
+            completedSubtasks = 1; // Partially complete
+        } else {
+            completedSubtasks = 0; // Not started
+        }
+    } else {
+        // Standard logic for other tasks
+        task.subtasks.forEach(subtask => {
+            totalSubtasks++;
+            if (subtask.complete) completedSubtasks++;
+        });
+    }
     
     // Update task header visual status
     const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
