@@ -1546,7 +1546,8 @@ function initializePatientTasks() {
                     subSubtasks: [
                         { name: 'Pending', complete: false },
                         { name: 'Sent', complete: false }
-                    ]
+                    ],
+                    note: 'Dose Type: [Auto-populated from Patient Info]'
                 }
             ]
         },
@@ -1736,6 +1737,11 @@ function generateSubtasks(task, patientId, taskIndex) {
                     }
                 });
                 html += '</ul>';
+            }
+            
+            // Add note if it exists (like dose type information)
+            if (subtask.note) {
+                html += `<div class="task-note">${subtask.note}</div>`;
             }
         });
     }
