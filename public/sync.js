@@ -137,7 +137,7 @@ async function createCalendarEvent(auth, patientData, eventType = 'follow-up') {
     
     let eventDate = new Date();
     let summary = `${eventType}: ${patientData['Patient Name']}`;
-    let description = `Patient: ${patientData['Patient Name']}\nAge: ${patientData['Age']}\nArea: ${patientData['Area']}\nCP Doctor: ${patientData['CP Doctor']}`;
+            let description = `Patient: ${patientData['Patient Name']}\nAge: ${patientData['Age']}\nCity: ${patientData['City'] || patientData.city}\nCP Doctor: ${patientData['CP Doctor']}`;
     
     // Use ingestion date if available
     if (patientData['Ingestion Date'] && patientData['Ingestion Date'] instanceof Date) {
@@ -182,7 +182,7 @@ async function createTask(auth, patientData, taskTitle, dueDate = null) {
     
     const task = {
         title: taskTitle || `Follow up with ${patientData['Patient Name']}`,
-        notes: `Patient: ${patientData['Patient Name']}\nAge: ${patientData['Age']}\nArea: ${patientData['Area']}\nCP Doctor: ${patientData['CP Doctor']}\nInvoice: $${patientData['invoice amount'] || 'N/A'}\nPaid: ${patientData['PAID'] || 'N/A'}`,
+        notes: `Patient: ${patientData['Patient Name']}\nAge: ${patientData['Age']}\nCity: ${patientData['City'] || patientData.city}\nCP Doctor: ${patientData['CP Doctor']}\nInvoice: $${patientData['invoice amount'] || 'N/A'}\nPaid: ${patientData['PAID'] || 'N/A'}`,
         due: taskDue.toISOString(),
     };
     

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Duplicate Patients</title>
+</head>
+<body>
+    <h2>Clear Duplicate Patients</h2>
+    <button onclick="clearDuplicates()">Clear Duplicates</button>
+    <button onclick="clearAll()">Clear All Patients</button>
+    <div id="result"></div>
+    
+    <script>
+    function clearDuplicates() {
+        // Get current patients
+        let patients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        
+        // Remove duplicates based on patient name
+        const uniquePatients = [];
+        const seenNames = new Set();
+        
+        patients.forEach(patient => {
+            const name = patient['Patient Name'] || patient.patientName;
+            if (name && !seenNames.has(name)) {
+                seenNames.add(name);
+                uniquePatients.push(patient);
+            }
+        });
+        
+        // Sort alphabetically by first name
+        uniquePatients.sort((a, b) => {
+            const nameA = (a['Patient Name'] || a.patientName || '').split(' ')[0].toLowerCase();
+            const nameB = (b['Patient Name'] || b.patientName || '').split(' ')[0].toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+        
+        // Save back
+        localStorage.setItem('activePatients', JSON.stringify(uniquePatients));
+        localStorage.setItem('patients', JSON.stringify(uniquePatients));
+        
+        document.getElementById('result').innerHTML = 
+            `<p>Removed ${patients.length - uniquePatients.length} duplicates.</p>
+             <p>Now have ${uniquePatients.length} unique patients.</p>`;
+    }
+    
+    function clearAll() {
+        localStorage.removeItem('activePatients');
+        localStorage.removeItem('patients');
+        document.getElementById('result').innerHTML = '<p>All patients cleared!</p>';
+    }
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 // server.js - Local development server using Express
 
 const express = require('express');
-const { authorize, readActiveTab, readVendorsTab, readChatTab, addChatMessage } = require('./sync');
+const { authorize, readActiveTab, readVendorsTab, readChatTab, addChatMessage, writeActiveTab } = require('./sync');
 
 const app = express();
 const port = 3000;
@@ -66,6 +66,21 @@ app.post('/api/add-chat-message', express.json(), async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to add chat message' });
+    }
+});
+
+// API endpoint for saving patient to Active tab
+app.post('/api/save-patient', async (req, res) => {
+    try {
+        const patientData = req.body;
+        if (!patientData.patientName) {
+            return res.status(400).json({ error: 'Patient name is required' });
+        }
+        const result = await writeActiveTab(patientData);
+        res.json(result);
+    } catch (err) {
+        console.error('Error saving patient:', err);
+        res.status(500).json({ error: 'Failed to save patient data' });
     }
 });
 

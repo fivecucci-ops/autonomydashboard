@@ -84,7 +84,7 @@ async function createCalendarEvent(patientData, eventType = 'follow-up') {
     const event = {
         id: Date.now().toString(),
         summary: `${eventType}: ${patientData['Patient Name']}`,
-        description: `Patient: ${patientData['Patient Name']}\nAge: ${patientData['Age']}\nArea: ${patientData['Area']}`,
+        description: `Patient: ${patientData['Patient Name']}\nAge: ${patientData['Age']}\nCity: ${patientData['City'] || patientData.city}`,
         start: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         created: new Date().toISOString()
     };
@@ -101,7 +101,7 @@ async function createTaskForPatient(patientData, taskTitle, dueDate = null) {
     const task = {
         id: Date.now().toString(),
         title: taskTitle || `Follow up with ${patientData['Patient Name']}`,
-        notes: `Patient: ${patientData['Patient Name']}\nAge: ${patientData['Age']}\nArea: ${patientData['Area']}`,
+        notes: `Patient: ${patientData['Patient Name']}\nAge: ${patientData['Age']}\nCity: ${patientData['City'] || patientData.city}`,
         due: (dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)).toISOString(),
         created: new Date().toISOString()
     };

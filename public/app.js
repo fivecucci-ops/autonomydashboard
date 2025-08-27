@@ -109,6 +109,9 @@ function switchTab(tabName, tabElement) {
         case 'dashboard':
             loadDashboard();
             break;
+        case 'patient-intake':
+            loadPatientIntake();
+            break;
         case 'active-data':
             loadActivePatients();
             break;
@@ -175,7 +178,7 @@ function generatePatientTable(data) {
     }
     
     // Use the important columns that we know exist in the data
-    const importantColumns = ['Patient Name', 'Age', 'Area', 'Phone Number', 'Email', 'CP Doctor', 'Hospice', 'PAID', 'Check list'];
+    const importantColumns = ['Patient Name', 'Age', 'City', 'Phone Number', 'Email', 'CP Doctor', 'Hospice', 'PAID', 'Check list'];
     
     let html = '<table class="data-table"><thead><tr>';
     importantColumns.forEach(col => {
@@ -188,7 +191,10 @@ function generatePatientTable(data) {
         importantColumns.forEach(col => {
             let value = patient[col] || '-';
             // Add some basic formatting
-            if (col === 'PAID' && value === 'yes') {
+            if (col === 'Patient Name' && value !== '-') {
+                // Make patient name clickable
+                value = `<a href="#" onclick="showPatientDetail(${index}); return false;" class="patient-name-link">${value}</a>`;
+            } else if (col === 'PAID' && value === 'yes') {
                 value = '✅ Yes';
             } else if (col === 'PAID' && value === 'no') {
                 value = '❌ No';
@@ -340,34 +346,70 @@ async function loadActivePatients() {
     showLoading();
     
     try {
-        // Fetch data from server
-        const response = await fetch('/api/read-active?spreadsheetId=local');
+        // First, try to get data from localStorage (includes newly added patients)
+        let localPatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
         
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        // Also try to fetch data from server
+        try {
+            const response = await fetch('/api/read-active?spreadsheetId=local');
+            
+            if (response.ok) {
+                const serverData = await response.json();
+                
+                // Merge server data with local data, avoiding duplicates
+                if (serverData && serverData.length > 0) {
+                    const patientNames = new Set(localPatients.map(p => p['Patient Name'] || p.patientName));
+                    serverData.forEach(patient => {
+                        const name = patient['Patient Name'] || patient.patientName;
+                        if (!patientNames.has(name)) {
+                            localPatients.push(patient);
+                        }
+                    });
+                }
+            }
+        } catch (serverError) {
+            console.log('Server fetch failed, using local data only:', serverError);
         }
         
-        const data = await response.json();
-        
-        if (!data || data.length === 0) {
-            throw new Error('No data received from server');
-        }
+        // Sort patients alphabetically by first name
+        localPatients.sort((a, b) => {
+            const nameA = (a['Patient Name'] || a.patientName || '').split(' ')[0].toLowerCase();
+            const nameB = (b['Patient Name'] || b.patientName || '').split(' ')[0].toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
         
         // Store data globally
-        currentData.active = data;
+        currentData.active = localPatients;
         
         // Create patient table
         const content = document.getElementById('content');
         content.innerHTML = `
-            <h1>Active Patients (${data.length})</h1>
-            ${generatePatientTable(data)}
+            <h1>Active Patients (${localPatients.length}) - Sorted A-Z by First Name</h1>
+            ${localPatients.length > 0 ? generatePatientTable(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
         `;
         
         setStatus('Active patients loaded successfully', 'success');
         
     } catch (error) {
         console.error('Error loading active patients:', error);
-        showError(`Failed to load active patients: ${error.message}`);
+        
+        // Fall back to just localStorage data
+        const localPatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        
+        // Sort patients alphabetically by first name
+        localPatients.sort((a, b) => {
+            const nameA = (a['Patient Name'] || a.patientName || '').split(' ')[0].toLowerCase();
+            const nameB = (b['Patient Name'] || b.patientName || '').split(' ')[0].toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+        
+        currentData.active = localPatients;
+        
+        const content = document.getElementById('content');
+        content.innerHTML = `
+            <h1>Active Patients (${localPatients.length}) - Sorted A-Z by First Name</h1>
+            ${localPatients.length > 0 ? generatePatientTable(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+        `;
     }
 }
 
@@ -422,7 +464,7 @@ function pinPatient(patientIndex) {
     document.getElementById('pinned-age').textContent = patient['Age'] || '-';
     document.getElementById('pinned-phone').textContent = patient['Phone Number'] || '-';
     document.getElementById('pinned-email').textContent = patient['Email'] || '-';
-    document.getElementById('pinned-address').textContent = patient['Area'] || '-';
+            document.getElementById('pinned-address').textContent = patient['City'] || patient.city || '-';
     document.getElementById('pinned-diagnosis').textContent = patient['CP Doctor'] || '-';
     document.getElementById('pinned-hospice').textContent = patient['Hospice'] || '-';
     document.getElementById('pinned-social-worker').textContent = patient['CP Completed'] || '-';
@@ -1080,7 +1122,7 @@ function loadPinnedPatient() {
         document.getElementById('pinned-age').textContent = pinnedPatient['Age'] || '-';
         document.getElementById('pinned-phone').textContent = pinnedPatient['Phone'] || pinnedPatient['ContactNumber'] || '-';
         document.getElementById('pinned-email').textContent = pinnedPatient['Email'] || pinnedPatient['ContactEmail'] || '-';
-        document.getElementById('pinned-address').textContent = pinnedPatient['Address'] || pinnedPatient['Area'] || '-';
+        document.getElementById('pinned-address').textContent = pinnedPatient['Address'] || pinnedPatient['City'] || pinnedPatient.city || '-';
         document.getElementById('pinned-diagnosis').textContent = pinnedPatient['Diagnosis'] || pinnedPatient['Condition'] || '-';
         document.getElementById('pinned-hospice').textContent = pinnedPatient['Hospice'] || '-';
         document.getElementById('pinned-social-worker').textContent = pinnedPatient['Social Worker'] || pinnedPatient['SocialWorker'] || '-';
@@ -1233,17 +1275,20 @@ async function loadPatientTimelines() {
             
             html += `
                 <div class="patient-timeline-card" id="${patientId}">
-                    <div class="patient-header">
-                        <div class="patient-info">
-                            <h3>${patientName}</h3>
-                            <span class="patient-details">Age: ${patient['Age'] || 'N/A'} | Area: ${patient['Area'] || 'N/A'} | Hospice: ${patient['Hospice'] || 'N/A'}</span>
-                        </div>
-                        <div class="patient-progress">
-                            <span class="progress-text">${calculateProgress(patientId)}% Complete</span>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${calculateProgress(patientId)}%"></div>
+                    <div class="patient-header" onclick="toggleTimelineCard('${patientId}')">
+                        <div>
+                            <div class="patient-info">
+                                <h3>${patientName}</h3>
+                                <span class="patient-details">Age: ${patient['Age'] || 'N/A'} | City: ${patient['City'] || patient.city || 'N/A'} | Hospice: ${patient['Hospice'] || 'N/A'}</span>
+                            </div>
+                            <div class="patient-progress">
+                                <span class="progress-text">${calculateProgress(patientId)}% Complete</span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${calculateProgress(patientId)}%"></div>
+                                </div>
                             </div>
                         </div>
+                        <div class="collapse-indicator">▼</div>
                     </div>
                     <div class="timeline-tasks">
                         ${generateImprovedTimelineSteps(patient, index)}
@@ -1464,8 +1509,28 @@ function updateSubtaskStatus(patientId, taskIndex, subIndex, checked) {
     localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
 }
 
+// Toggle individual timeline card
+function toggleTimelineCard(patientId) {
+    const card = document.getElementById(patientId);
+    const indicator = card.querySelector('.collapse-indicator');
+    
+    if (card.classList.contains('collapsed')) {
+        card.classList.remove('collapsed');
+        indicator.style.transform = 'none';
+    } else {
+        card.classList.add('collapsed');
+    }
+}
+
 // Expand all timelines
 function expandAllTimelines() {
+    // Expand all patient timeline cards
+    const cards = document.querySelectorAll('.patient-timeline-card');
+    cards.forEach(card => {
+        card.classList.remove('collapsed');
+    });
+    
+    // Also expand all task subtasks
     document.querySelectorAll('.task-subtasks').forEach(subtasks => {
         subtasks.style.display = 'block';
         subtasks.parentElement.classList.add('expanded');
@@ -1475,12 +1540,21 @@ function expandAllTimelines() {
 
 // Collapse all timelines
 function collapseAllTimelines() {
+    // Collapse all patient timeline cards
+    const cards = document.querySelectorAll('.patient-timeline-card');
+    cards.forEach(card => {
+        card.classList.add('collapsed');
+    });
+    
+    // Also collapse all task subtasks
     document.querySelectorAll('.task-subtasks').forEach(subtasks => {
         subtasks.style.display = 'none';
         subtasks.parentElement.classList.remove('expanded');
         subtasks.parentElement.querySelector('.task-expand').textContent = '▼';
     });
 }
+
+
 
 // Filter timelines
 function filterTimelines(filter) {
@@ -2192,4 +2266,1347 @@ function createEventForPinned() {
         // TODO: Implement event creation
         setStatus(`Event created for ${pinnedPatient['Patient Name']}: ${eventTitle}`, 'success');
     }
+}
+
+/**
+ * Load Patient Intake Form
+ */
+function loadPatientIntake() {
+    showLoading();
+    const content = document.getElementById('content');
+    
+    content.innerHTML = `
+        <div class="patient-intake-container">
+            <h2>📋 New Patient Intake Form</h2>
+            <p class="intake-description">Enter new patient information below. This data will automatically populate to relevant tabs and sheets.</p>
+            
+            <form id="patient-intake-form" class="intake-form">
+                <!-- Basic Information Section -->
+                <div class="form-section">
+                    <h3>Basic Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="patient-name">Patient Name *</label>
+                            <input type="text" id="patient-name" name="patientName" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="dob">Date of Birth *</label>
+                            <input type="text" id="dob" name="dob" required placeholder="MM/DD/YYYY" maxlength="10" title="Please enter date in MM/DD/YYYY format (e.g., 12/25/1985)">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="age">Age</label>
+                            <input type="number" id="age" name="age" min="0" max="150" readonly>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="gender">Gender</label>
+                            <select id="gender" name="gender">
+                                <option value="">Select...</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                                <option value="Prefer not to say">Prefer not to say</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contact Information Section -->
+                <div class="form-section">
+                    <h3>Contact Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="address">Address *</label>
+                            <input type="text" id="address" name="address" required placeholder="Street Address">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="city">City *</label>
+                            <input type="text" id="city" name="city" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="state">State *</label>
+                            <input type="text" id="state" name="state" required maxlength="2">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="zip">ZIP Code *</label>
+                            <input type="text" id="zip" name="zip" required pattern="[0-9]{5}(-[0-9]{4})?">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="phone">Phone Number *</label>
+                            <input type="tel" id="phone" name="phone" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" name="email">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="primary-contact">Primary Contact Name *</label>
+                            <input type="text" id="primary-contact" name="primaryContact" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="primary-contact-phone">Primary Contact Phone *</label>
+                            <input type="tel" id="primary-contact-phone" name="primaryContactPhone" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="primary-contact-relation">Relationship to Patient</label>
+                            <select id="primary-contact-relation" name="primaryContactRelation">
+                                <option value="">Select...</option>
+                                <option value="Spouse">Spouse</option>
+                                <option value="Child">Child</option>
+                                <option value="Parent">Parent</option>
+                                <option value="Sibling">Sibling</option>
+                                <option value="Friend">Friend</option>
+                                <option value="Caregiver">Caregiver</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Medical Information Section -->
+                <div class="form-section">
+                    <h3>Medical Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="diagnosis">Primary Diagnosis *</label>
+                            <input type="text" id="diagnosis" name="diagnosis" required placeholder="e.g., Stage IV Lung Cancer">
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="secondary-diagnosis">Secondary Diagnoses</label>
+                            <textarea id="secondary-diagnosis" name="secondaryDiagnosis" rows="2" placeholder="Additional diagnoses..."></textarea>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="symptoms">Current Symptoms *</label>
+                            <textarea id="symptoms" name="symptoms" required rows="3" placeholder="Pain, shortness of breath, fatigue, etc."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="medical-history">Relevant Medical History</label>
+                            <textarea id="medical-history" name="medicalHistory" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="medications">Current Medications</label>
+                            <textarea id="medications" name="medications" rows="3" placeholder="List all current medications..."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="allergies">Allergies</label>
+                            <textarea id="allergies" name="allergies" rows="2" placeholder="Drug allergies, food allergies, etc."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="prognosis">Prognosis</label>
+                            <select id="prognosis" name="prognosis">
+                                <option value="">Select...</option>
+                                <option value="Less than 6 months">Less than 6 months</option>
+                                <option value="6-12 months">6-12 months</option>
+                                <option value="12+ months">12+ months</option>
+                                <option value="Uncertain">Uncertain</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Care Team Section -->
+                <div class="form-section">
+                    <h3>Care Team Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="cp-doctor">CP Doctor *</label>
+                            <input type="text" id="cp-doctor" name="cpDoctor" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="referring-physician">Referring Physician</label>
+                            <input type="text" id="referring-physician" name="referringPhysician">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="hospice">Hospice Provider *</label>
+                            <input type="text" id="hospice" name="hospice" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="hospice-nurse">Hospice Nurse</label>
+                            <input type="text" id="hospice-nurse" name="hospiceNurse">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="social-worker">Social Worker</label>
+                            <input type="text" id="social-worker" name="socialWorker">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="doula">Doula</label>
+                            <input type="text" id="doula" name="doula">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Insurance & Financial Section -->
+                <div class="form-section">
+                    <h3>Insurance & Financial Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="medical-id">Medi-Cal ID Number</label>
+                            <input type="text" id="medical-id" name="medicalId" placeholder="Enter Medi-Cal ID">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="invoice-amount">Invoice Amount</label>
+                            <input type="number" id="invoice-amount" name="invoiceAmount" min="0" step="0.01" placeholder="0.00">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="payment-status">Payment Status</label>
+                            <select id="payment-status" name="paymentStatus">
+                                <option value="Pending">Pending</option>
+                                <option value="Paid">Paid</option>
+                                <option value="Insurance Processing">Insurance Processing</option>
+                                <option value="Denied">Denied</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Information Section -->
+                <div class="form-section">
+                    <h3>Additional Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="intake-date">Intake Date *</label>
+                            <input type="text" id="intake-date" name="intakeDate" required placeholder="MM/DD/YYYY" maxlength="10" title="Please enter date in MM/DD/YYYY format (e.g., 12/25/2024)">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="intake-staff">Intake Staff *</label>
+                            <input type="text" id="intake-staff" name="intakeStaff" required placeholder="Your name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="priority">Priority Level</label>
+                            <select id="priority" name="priority">
+                                <option value="Standard">Standard</option>
+                                <option value="High">High</option>
+                                <option value="Urgent">Urgent</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="dose-level">Dose Level</label>
+                            <select id="dose-level" name="doseLevel">
+                                <option value="">Select dose level</option>
+                                <option value="Regular Dose">Regular Dose</option>
+                                <option value="High Dose">High Dose</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="special-needs">Special Needs/Considerations</label>
+                            <textarea id="special-needs" name="specialNeeds" rows="2" placeholder="Language barriers, mobility issues, etc."></textarea>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="notes">Additional Notes</label>
+                            <textarea id="notes" name="notes" rows="3" placeholder="Any additional information..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="saveDraft()">Save as Draft</button>
+                    <button type="button" class="btn-secondary" onclick="clearIntakeForm()">Clear Form</button>
+                    <button type="submit" class="btn-primary">Submit Patient Intake</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    // Auto-calculate age from DOB and format date input
+    const dobInput = document.getElementById('dob');
+    const ageInput = document.getElementById('age');
+    
+    // Format DOB input as user types
+    dobInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+        
+        if (value.length >= 5) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4, 8);
+        } else if (value.length >= 3) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4);
+        } else if (value.length >= 1) {
+            value = value.slice(0, 2);
+        }
+        
+        e.target.value = value;
+        
+        // Calculate age when we have a complete date
+        if (value.length === 10) {
+            calculateAge(value);
+        } else {
+            ageInput.value = '';
+        }
+    });
+    
+    // Calculate age from formatted date string
+    function calculateAge(dateString) {
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+            const month = parseInt(parts[0]) - 1; // Month is 0-indexed
+            const day = parseInt(parts[1]);
+            const year = parseInt(parts[2]);
+            
+            const dob = new Date(year, month, day);
+            const today = new Date();
+            
+            if (!isNaN(dob.getTime())) {
+                let age = today.getFullYear() - dob.getFullYear();
+                const monthDiff = today.getMonth() - dob.getMonth();
+                
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                }
+                
+                ageInput.value = age;
+            }
+        }
+    }
+    
+    // Format phone numbers
+    document.getElementById('phone').addEventListener('input', formatPhoneNumber);
+    document.getElementById('primary-contact-phone').addEventListener('input', formatPhoneNumber);
+    
+    // Format intake date input
+    document.getElementById('intake-date').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+        
+        if (value.length >= 5) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4, 8);
+        } else if (value.length >= 3) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4);
+        } else if (value.length >= 1) {
+            value = value.slice(0, 2);
+        }
+        
+        e.target.value = value;
+    });
+    
+    // Handle form submission
+    document.getElementById('patient-intake-form').addEventListener('submit', handleIntakeSubmit);
+    
+    // Load any saved draft
+    loadDraft();
+    
+    // Load dummy data for testing (remove this in production)
+    loadDummyData();
+    
+    hideLoading();
+}
+
+/**
+ * Load dummy data for testing purposes
+ */
+function loadDummyData() {
+    const form = document.getElementById('patient-intake-form');
+    if (!form) return;
+    
+    // Dummy patient data
+    const dummyData = {
+        patientName: 'Sarah Johnson',
+        dob: '05/15/1968',
+        age: '55',
+        gender: 'Female',
+        address: '123 Oak Street',
+        city: 'San Diego',
+        state: 'CA',
+        zip: '92101',
+        phone: '(619) 555-0123',
+        email: 'sarah.johnson@email.com',
+        primaryContact: 'Michael Johnson',
+        primaryContactPhone: '(619) 555-0124',
+        primaryContactRelation: 'Spouse',
+        diagnosis: 'Stage IV Lung Cancer',
+        secondaryDiagnosis: 'COPD, Hypertension',
+        symptoms: 'Shortness of breath, fatigue, chest pain, loss of appetite',
+        medicalHistory: 'Former smoker, diagnosed with COPD in 2015, hypertension managed with medication',
+        medications: 'Morphine 15mg every 4 hours, Albuterol inhaler, Lisinopril 10mg daily',
+        allergies: 'Penicillin, Sulfa drugs',
+        prognosis: 'Less than 6 months',
+        cpDoctor: 'Dr. Emily Rodriguez',
+        referringPhysician: 'Dr. James Wilson',
+        hospice: 'Hospice of San Diego',
+        hospiceNurse: 'Nurse Jennifer Martinez',
+        socialWorker: 'Maria Gonzalez',
+        doula: 'Lisa Thompson',
+        medicalId: 'MC123456789',
+        invoiceAmount: '2500.00',
+        paymentStatus: 'Pending',
+        city: 'San Diego',
+        intakeDate: '01/15/2024',
+        intakeStaff: 'Alyssa Forcucci',
+        priority: 'High',
+        doseLevel: 'High Dose',
+        specialNeeds: 'Requires Spanish interpreter, mobility assistance needed',
+        notes: 'Patient prefers home care, family very involved in care decisions'
+    };
+    
+    // Fill the form with dummy data
+    Object.keys(dummyData).forEach(key => {
+        const input = form.elements[key];
+        if (input) {
+            input.value = dummyData[key];
+        }
+    });
+    
+        // Show notification that dummy data is loaded
+    showNotification('Dummy data loaded for testing. Remember to clear before entering real patient data.', 'info');
+}
+
+/**
+ * Format phone number input
+ */
+function formatPhoneNumber(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length >= 6) {
+        value = `(${value.slice(0,3)}) ${value.slice(3,6)}-${value.slice(6,10)}`;
+    } else if (value.length >= 3) {
+        value = `(${value.slice(0,3)}) ${value.slice(3)}`;
+    }
+    e.target.value = value;
+}
+
+/**
+ * Handle intake form submission
+ */
+async function handleIntakeSubmit(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const patientData = Object.fromEntries(formData);
+    
+    // Keep the intake date from the form if provided, otherwise use current date
+    if (!patientData.intakeDate) {
+        patientData.intakeDate = new Date().toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric'
+        });
+    }
+    patientData.lastModified = new Date().toISOString();
+    
+    try {
+        // Save to localStorage first
+        savePatientToLocal(patientData);
+        
+        // Always try to save to Excel file
+        try {
+            await savePatientToSheets(patientData);
+        } catch (error) {
+            console.log('Excel save failed, but local save successful');
+        }
+        
+        // Show success message
+        showNotification(`Patient ${patientData.patientName} added successfully to Active Patients!`, 'success');
+        
+        // Clear the form for next patient
+        document.getElementById('patient-intake-form').reset();
+        document.getElementById('age').value = '';
+        
+        // Switch to active patients tab to show new entry immediately
+        setTimeout(() => {
+            switchTab('active-data', document.querySelector('[data-tab="active-data"]'));
+        }, 500);
+        
+    } catch (error) {
+        console.error('Error submitting intake:', error);
+        showNotification('Error submitting intake. Data saved locally.', 'error');
+    }
+}
+
+/**
+ * Save patient to localStorage
+ */
+function savePatientToLocal(patientData) {
+    // Add unique ID
+    patientData.id = 'PAT-' + Date.now();
+    
+    // Format the data to match the expected structure for display
+    const formattedPatientData = {
+        ...patientData,
+        'Patient Name': patientData.patientName,
+        'Age': patientData.age,
+        'City': patientData.city,
+        'CP Doctor': patientData.cpDoctor,
+        'Hospice': patientData.hospice,
+        'Phone Number': patientData.phone,
+        'Email': patientData.email,
+        'DOB': patientData.dob,
+        'Ingestion Date': patientData.intakeDate,
+        'Invoice amount': patientData.invoiceAmount,
+        'PAID': patientData.paymentStatus === 'Paid' ? 'yes' : 'no',
+        'Check list': 'In Progress'
+    };
+    
+    // Get existing active patients list
+    let activePatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+    
+    // Check if patient already exists to avoid duplicates
+    const patientExists = activePatients.some(p => 
+        (p['Patient Name'] === formattedPatientData['Patient Name']) || 
+        (p.patientName === formattedPatientData.patientName)
+    );
+    
+    if (!patientExists) {
+        // Add new patient to the list
+        activePatients.push(formattedPatientData);
+        
+        // Sort alphabetically by first name (A-Z)
+        activePatients.sort((a, b) => {
+            const nameA = (a['Patient Name'] || a.patientName || '').split(' ')[0].toLowerCase();
+            const nameB = (b['Patient Name'] || b.patientName || '').split(' ')[0].toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+        
+        // Save the sorted list
+        localStorage.setItem('activePatients', JSON.stringify(activePatients));
+        
+        // Also save to general patients list
+        localStorage.setItem('patients', JSON.stringify(activePatients));
+        
+        // Update current data if available
+        if (currentData.active) {
+            currentData.active = activePatients;
+        }
+    }
+}
+
+/**
+ * Save patient to Google Sheets
+ */
+async function savePatientToSheets(patientData) {
+    try {
+        // Call the API to save patient data to Excel
+        const response = await fetch('/api/save-patient', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(patientData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Patient saved to Excel:', result);
+        showNotification('Patient successfully saved to Excel file!', 'success');
+        return result;
+        
+    } catch (error) {
+        console.error('Error saving to Excel:', error);
+        showNotification('Failed to save to Excel file. Data saved locally.', 'warning');
+        throw error;
+    }
+}
+
+/**
+ * Clear intake form
+ */
+function clearIntakeForm() {
+    document.getElementById('patient-intake-form').reset();
+    document.getElementById('age').value = '';
+    localStorage.removeItem('intakeDraft');
+    showNotification('Form cleared successfully', 'info');
+}
+
+/**
+ * Save form as draft
+ */
+function saveDraft() {
+    const form = document.getElementById('patient-intake-form');
+    const formData = new FormData(form);
+    const draft = Object.fromEntries(formData);
+    
+    localStorage.setItem('intakeDraft', JSON.stringify(draft));
+    showNotification('Draft saved successfully!', 'success');
+}
+
+/**
+ * Load saved draft
+ */
+function loadDraft() {
+    const draft = localStorage.getItem('intakeDraft');
+    if (draft) {
+        const draftData = JSON.parse(draft);
+        const form = document.getElementById('patient-intake-form');
+        
+        Object.keys(draftData).forEach(key => {
+            const input = form.elements[key];
+            if (input) {
+                input.value = draftData[key];
+            }
+        });
+        
+        showNotification('Draft loaded from previous session', 'info');
+    }
+}
+
+/**
+ * Show notification
+ */
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}
+
+/**
+ * Normalize patient data to ensure consistent field names
+ */
+function normalizePatientData(patient) {
+    // Create a normalized object with all possible fields
+    return {
+        ...patient,
+        // Ensure both formats are available
+        'Patient Name': patient['Patient Name'] || patient.patientName,
+        patientName: patient.patientName || patient['Patient Name'],
+        'Age': patient['Age'] || patient.age,
+        age: patient.age || patient['Age'],
+        'DOB': patient['DOB'] || patient.dob,
+        dob: patient.dob || patient['DOB'],
+        'Phone Number': patient['Phone Number'] || patient.phone,
+        phone: patient.phone || patient['Phone Number'],
+        'Email': patient['Email'] || patient.email,
+        email: patient.email || patient['Email'],
+        'CP Doctor': patient['CP Doctor'] || patient.cpDoctor,
+        cpDoctor: patient.cpDoctor || patient['CP Doctor'],
+        'Hospice': patient['Hospice'] || patient.hospice,
+        hospice: patient.hospice || patient['Hospice'],
+        'Ingestion Date': patient['Ingestion Date'] || patient.intakeDate,
+        intakeDate: patient.intakeDate || patient['Ingestion Date'],
+        'Invoice amount': patient['Invoice amount'] || patient.invoiceAmount,
+        invoiceAmount: patient.invoiceAmount || patient['Invoice amount'],
+        'PAID': patient['PAID'] || (patient.paymentStatus === 'Paid' ? 'yes' : patient.paymentStatus === 'Pending' ? 'no' : patient['PAID']),
+        'Check list': patient['Check list'] || patient.checklistStatus || 'In Progress'
+    };
+}
+
+/**
+ * Show detailed patient information
+ */
+function showPatientDetail(index) {
+    // Get patient data from current view or localStorage
+    let patient = null;
+    
+    // First try currentData
+    if (currentData.active && currentData.active[index]) {
+        patient = currentData.active[index];
+    }
+    
+    // If not found, try localStorage
+    if (!patient) {
+        const storedPatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        if (storedPatients[index]) {
+            patient = storedPatients[index];
+        }
+    }
+    
+    // If still not found, try the general patients list
+    if (!patient) {
+        const allPatients = JSON.parse(localStorage.getItem('patients') || '[]');
+        if (allPatients[index]) {
+            patient = allPatients[index];
+        }
+    }
+    
+    if (!patient) {
+        showNotification('Patient data not found', 'error');
+        return;
+    }
+    
+    // Ensure all fields are properly mapped
+    patient = normalizePatientData(patient);
+    
+    // Store the index globally for saving
+    window.currentEditingPatientIndex = index;
+    window.currentEditingPatient = {...patient}; // Create a copy
+    
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'patient-detail-modal';
+    modal.setAttribute('data-patient-index', index);
+    modal.innerHTML = `
+        <div class="patient-detail-container">
+            <div class="patient-detail-header">
+                <h2>Patient Information</h2>
+                <button class="close-detail" onclick="closePatientDetail()">✕</button>
+            </div>
+            
+            <div class="patient-detail-body" id="patient-detail-body">
+                <!-- Basic Information -->
+                <div class="detail-section">
+                    <h3>📋 Basic Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Patient Name:</label>
+                            <span class="editable-field" data-field="patientName">${patient['Patient Name'] || patient.patientName || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Date of Birth:</label>
+                            <span class="editable-field" data-field="dob" data-type="date">${patient['DOB'] || patient.dob || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Age:</label>
+                            <span class="editable-field" data-field="age" data-readonly="true">${patient['Age'] || patient.age || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Gender:</label>
+                            <span class="editable-field" data-field="gender" data-type="select" data-options="Male,Female,Other,Prefer not to say">${patient.gender || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contact Information -->
+                <div class="detail-section">
+                    <h3>📞 Contact Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Address:</label>
+                            <span class="editable-field" data-field="address">${patient.address || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>City:</label>
+                            <span class="editable-field" data-field="city">${patient.city || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>State:</label>
+                            <span class="editable-field" data-field="state">${patient.state || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>ZIP Code:</label>
+                            <span class="editable-field" data-field="zip">${patient.zip || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Phone:</label>
+                            <span class="editable-field" data-field="phone">${patient['Phone Number'] || patient.phone || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Email:</label>
+                            <span class="editable-field" data-field="email">${patient['Email'] || patient.email || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Primary Contact:</label>
+                            <span class="editable-field" data-field="primaryContact">${patient.primaryContact || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Contact Phone:</label>
+                            <span class="editable-field" data-field="primaryContactPhone">${patient.primaryContactPhone || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Relationship:</label>
+                            <span class="editable-field" data-field="primaryContactRelation" data-type="select" data-options="Spouse,Child,Parent,Sibling,Friend,Caregiver,Other">${patient.primaryContactRelation || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Medical Information -->
+                <div class="detail-section">
+                    <h3>🏥 Medical Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item full-width">
+                            <label>Primary Diagnosis:</label>
+                            <span class="editable-field" data-field="diagnosis">${patient.diagnosis || '-'}</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <label>Secondary Diagnoses:</label>
+                            <span class="editable-field" data-field="secondaryDiagnosis">${patient.secondaryDiagnosis || '-'}</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <label>Current Symptoms:</label>
+                            <span class="editable-field" data-field="symptoms">${patient.symptoms || '-'}</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <label>Medical History:</label>
+                            <span class="editable-field" data-field="medicalHistory">${patient.medicalHistory || '-'}</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <label>Current Medications:</label>
+                            <span class="editable-field" data-field="medications">${patient.medications || '-'}</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <label>Allergies:</label>
+                            <span class="editable-field" data-field="allergies">${patient.allergies || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Prognosis:</label>
+                            <span class="editable-field" data-field="prognosis" data-type="select" data-options="Less than 6 months,6-12 months,12+ months,Uncertain">${patient.prognosis || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Care Team -->
+                <div class="detail-section">
+                    <h3>👨‍⚕️ Care Team</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>CP Doctor:</label>
+                            <span class="editable-field" data-field="cpDoctor">${patient['CP Doctor'] || patient.cpDoctor || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Referring Physician:</label>
+                            <span class="editable-field" data-field="referringPhysician">${patient.referringPhysician || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Hospice Provider:</label>
+                            <span class="editable-field" data-field="hospice">${patient['Hospice'] || patient.hospice || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Hospice Nurse:</label>
+                            <span class="editable-field" data-field="hospiceNurse">${patient.hospiceNurse || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Social Worker:</label>
+                            <span class="editable-field" data-field="socialWorker">${patient.socialWorker || '-'}</span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <label>Doula:</label>
+                            <span class="editable-field" data-field="doula">${patient.doula || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Insurance & Financial -->
+                <div class="detail-section">
+                    <h3>💰 Insurance & Financial</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Medi-Cal ID Number:</label>
+                            <span class="editable-field" data-field="medicalId">${patient.medicalId || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Invoice Amount:</label>
+                            <span class="editable-field" data-field="invoiceAmount">${patient['Invoice amount'] || patient.invoiceAmount || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Payment Status:</label>
+                            <span class="editable-field" data-field="paymentStatus" data-type="select" data-options="Pending,Paid,Insurance Processing,Denied">${patient.paymentStatus || 'Pending'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Information -->
+                <div class="detail-section">
+                    <h3>📝 Additional Information</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Intake Date:</label>
+                            <span class="editable-field" data-field="intakeDate" data-type="date">${patient['Ingestion Date'] || patient.intakeDate || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Intake Staff:</label>
+                            <span class="editable-field" data-field="intakeStaff">${patient.intakeStaff || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Priority Level:</label>
+                            <span class="editable-field" data-field="priority" data-type="select" data-options="Standard,High,Urgent">${patient.priority || 'Standard'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Dose Level:</label>
+                            <span class="editable-field" data-field="doseLevel" data-type="select" data-options="Regular Dose,High Dose">${patient.doseLevel || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Checklist Status:</label>
+                            <span class="editable-field" data-field="checklistStatus" data-type="select" data-options="In Progress,Complete">${patient['Check list'] === 'complete' ? 'Complete' : 'In Progress'}</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <label>Special Needs:</label>
+                            <span class="editable-field" data-field="specialNeeds">${patient.specialNeeds || '-'}</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <label>Notes:</label>
+                            <span class="editable-field" data-field="notes">${patient.notes || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="patient-detail-footer" id="patient-detail-footer">
+                <button class="btn-secondary" onclick="closePatientDetail()">Close</button>
+                <button class="btn-secondary" id="edit-mode-btn" onclick="toggleEditMode(${index})">✏️ Edit</button>
+                <button class="btn-primary" id="save-btn" style="display:none;" onclick="saveInlineChanges(${index})">💾 Save Changes</button>
+                <button class="btn-secondary" id="cancel-btn" style="display:none;" onclick="cancelEditMode(${index})">Cancel</button>
+                <button class="btn-primary" id="pin-btn" onclick="pinPatientFromDetail(${index})">📌 Pin Patient</button>
+                <button class="btn-primary" id="task-btn" onclick="createTaskFromDetail(${index})">📝 Create Task</button>
+                <button class="btn-primary" id="event-btn" onclick="createEventFromDetail(${index})">📅 Create Event</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Add click outside to close
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closePatientDetail();
+        }
+    });
+    
+    // Add escape key to close
+    document.addEventListener('keydown', function escapeHandler(e) {
+        if (e.key === 'Escape') {
+            closePatientDetail();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    });
+}
+
+/**
+ * Toggle edit mode in patient detail modal
+ */
+function toggleEditMode(index) {
+    const modal = document.querySelector('.patient-detail-modal');
+    if (!modal) return;
+    
+    // Show/hide buttons
+    document.getElementById('edit-mode-btn').style.display = 'none';
+    document.getElementById('save-btn').style.display = 'inline-block';
+    document.getElementById('cancel-btn').style.display = 'inline-block';
+    document.getElementById('pin-btn').style.display = 'none';
+    document.getElementById('task-btn').style.display = 'none';
+    document.getElementById('event-btn').style.display = 'none';
+    
+    // Make fields editable
+    const editableFields = modal.querySelectorAll('.editable-field');
+    editableFields.forEach(field => {
+        const fieldName = field.dataset.field;
+        const fieldType = field.dataset.type;
+        const isReadonly = field.dataset.readonly === 'true';
+        
+        if (isReadonly) return;
+        
+        const currentValue = field.textContent === '-' ? '' : field.textContent;
+        
+        if (fieldType === 'select') {
+            const options = field.dataset.options.split(',');
+            const select = document.createElement('select');
+            select.className = 'detail-input';
+            select.dataset.field = fieldName;
+            
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                if (opt === currentValue) option.selected = true;
+                select.appendChild(option);
+            });
+            
+            field.parentNode.replaceChild(select, field);
+        } else if (fieldType === 'date') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'detail-input';
+            input.dataset.field = fieldName;
+            input.value = currentValue;
+            input.placeholder = 'MM/DD/YYYY';
+            input.maxLength = 10;
+            
+            // Add date formatting
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length >= 5) {
+                    value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4, 8);
+                } else if (value.length >= 3) {
+                    value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                }
+                e.target.value = value;
+                
+                // Update age if DOB changes
+                if (fieldName === 'dob' && value.length === 10) {
+                    updateAgeFromDOB(value);
+                }
+            });
+            
+            field.parentNode.replaceChild(input, field);
+        } else if (fieldName === 'phone' || fieldName === 'primaryContactPhone') {
+            const input = document.createElement('input');
+            input.type = 'tel';
+            input.className = 'detail-input';
+            input.dataset.field = fieldName;
+            input.value = currentValue;
+            
+            // Add phone formatting
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length >= 6) {
+                    value = `(${value.slice(0,3)}) ${value.slice(3,6)}-${value.slice(6,10)}`;
+                } else if (value.length >= 3) {
+                    value = `(${value.slice(0,3)}) ${value.slice(3)}`;
+                }
+                e.target.value = value;
+            });
+            
+            field.parentNode.replaceChild(input, field);
+        } else if (fieldName === 'symptoms' || fieldName === 'secondaryDiagnosis' || fieldName === 'medicalHistory' || 
+                   fieldName === 'medications' || fieldName === 'allergies' || fieldName === 'specialNeeds' || fieldName === 'notes') {
+            const textarea = document.createElement('textarea');
+            textarea.className = 'detail-input detail-textarea';
+            textarea.dataset.field = fieldName;
+            textarea.value = currentValue;
+            textarea.rows = 3;
+            
+            field.parentNode.replaceChild(textarea, field);
+        } else {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'detail-input';
+            input.dataset.field = fieldName;
+            input.value = currentValue;
+            
+            field.parentNode.replaceChild(input, field);
+        }
+    });
+    
+    // Add edit mode class to modal
+    modal.classList.add('edit-mode');
+}
+
+/**
+ * Update age from DOB in edit mode
+ */
+function updateAgeFromDOB(dateString) {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+        const month = parseInt(parts[0]) - 1;
+        const day = parseInt(parts[1]);
+        const year = parseInt(parts[2]);
+        
+        const dob = new Date(year, month, day);
+        const today = new Date();
+        
+        if (!isNaN(dob.getTime())) {
+            let age = today.getFullYear() - dob.getFullYear();
+            const monthDiff = today.getMonth() - dob.getMonth();
+            
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                age--;
+            }
+            
+            // Find age field and update it
+            const ageField = document.querySelector('[data-field="age"]');
+            if (ageField) {
+                ageField.textContent = age;
+            }
+        }
+    }
+}
+
+/**
+ * Save inline changes
+ */
+function saveInlineChanges(index) {
+    const modal = document.querySelector('.patient-detail-modal');
+    if (!modal) return;
+    
+    // Collect all edited values
+    const editedData = {};
+    const inputs = modal.querySelectorAll('.detail-input');
+    
+    inputs.forEach(input => {
+        const fieldName = input.dataset.field;
+        const value = input.value || input.textContent;
+        editedData[fieldName] = value;
+    });
+    
+    // Also get readonly fields
+    const readonlyFields = modal.querySelectorAll('[data-readonly="true"]');
+    readonlyFields.forEach(field => {
+        const fieldName = field.dataset.field;
+        editedData[fieldName] = field.textContent;
+    });
+    
+    // Get the patient's name to find all instances
+    const patientName = editedData.patientName || editedData['Patient Name'] || '';
+    
+    // Update patient data in localStorage
+    let patients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+    if (patients[index]) {
+        // Merge edited data with existing patient data
+        patients[index] = {...patients[index], ...editedData};
+        patients[index].lastModified = new Date().toISOString();
+        
+        // Save back to localStorage
+        localStorage.setItem('activePatients', JSON.stringify(patients));
+    }
+    
+    // Update current data if available
+    if (currentData.active && currentData.active[index]) {
+        currentData.active[index] = {...currentData.active[index], ...editedData};
+    }
+    
+    // Update all other patient lists in localStorage
+    updateAllPatientLists(patientName, editedData);
+    
+    // Update any pinned patient if this is the same patient
+    updatePinnedPatient(patientName, editedData);
+    
+    // Update any tasks or notes associated with this patient
+    updatePatientReferences(patientName, editedData);
+    
+    showNotification('Patient information updated successfully across all sections!', 'success');
+    
+    // Refresh the patient detail view
+    closePatientDetail();
+    showPatientDetail(index);
+}
+
+/**
+ * Update all patient lists in localStorage
+ */
+function updateAllPatientLists(patientName, editedData) {
+    if (!patientName) return;
+    
+    // Update 'patients' list (general patient list)
+    let allPatients = JSON.parse(localStorage.getItem('patients') || '[]');
+    allPatients.forEach((patient, idx) => {
+        if (patient['Patient Name'] === patientName || patient.patientName === patientName) {
+            allPatients[idx] = {...patient, ...editedData, lastModified: new Date().toISOString()};
+        }
+    });
+    localStorage.setItem('patients', JSON.stringify(allPatients));
+    
+    // Update 'activePatients' list
+    let activePatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+    activePatients.forEach((patient, idx) => {
+        if (patient['Patient Name'] === patientName || patient.patientName === patientName) {
+            activePatients[idx] = {...patient, ...editedData, lastModified: new Date().toISOString()};
+        }
+    });
+    localStorage.setItem('activePatients', JSON.stringify(activePatients));
+    
+    // Update any other patient lists that might exist
+    const patientListKeys = ['closedPatients', 'outstandingPatients', 'outreachPatients'];
+    patientListKeys.forEach(key => {
+        let patientList = JSON.parse(localStorage.getItem(key) || '[]');
+        let updated = false;
+        patientList.forEach((patient, idx) => {
+            if (patient['Patient Name'] === patientName || patient.patientName === patientName) {
+                patientList[idx] = {...patient, ...editedData, lastModified: new Date().toISOString()};
+                updated = true;
+            }
+        });
+        if (updated) {
+            localStorage.setItem(key, JSON.stringify(patientList));
+        }
+    });
+}
+
+/**
+ * Update pinned patient if it's the same patient
+ */
+function updatePinnedPatient(patientName, editedData) {
+    if (!patientName) return;
+    
+    const pinnedPatient = JSON.parse(localStorage.getItem('pinnedPatient') || '{}');
+    if (pinnedPatient['Patient Name'] === patientName || pinnedPatient.patientName === patientName) {
+        const updatedPinnedPatient = {...pinnedPatient, ...editedData, lastModified: new Date().toISOString()};
+        localStorage.setItem('pinnedPatient', JSON.stringify(updatedPinnedPatient));
+        
+        // Update the pinned patient display if it's currently shown
+        updatePinnedPatientDisplay(updatedPinnedPatient);
+    }
+}
+
+/**
+ * Update pinned patient display
+ */
+function updatePinnedPatientDisplay(updatedPatient) {
+    // Update the pinned patient footer if it exists
+    const pinnedName = document.getElementById('pinned-name');
+    const pinnedDob = document.getElementById('pinned-dob');
+    const pinnedAge = document.getElementById('pinned-age');
+    const pinnedPhone = document.getElementById('pinned-phone');
+    
+    if (pinnedName) {
+        pinnedName.textContent = updatedPatient['Patient Name'] || updatedPatient.patientName || 'Unknown';
+    }
+    if (pinnedDob) {
+        pinnedDob.textContent = updatedPatient['DOB'] || updatedPatient.dob ? formatDate(updatedPatient['DOB'] || updatedPatient.dob) : '-';
+    }
+    if (pinnedAge) {
+        pinnedAge.textContent = updatedPatient['Age'] || updatedPatient.age || '-';
+    }
+    if (pinnedPhone) {
+        pinnedPhone.textContent = updatedPatient['Phone Number'] || updatedPatient.phone || '-';
+    }
+}
+
+/**
+ * Update any patient references in tasks, notes, etc.
+ */
+function updatePatientReferences(patientName, editedData) {
+    if (!patientName) return;
+    
+    // Update tasks that reference this patient
+    let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    let tasksUpdated = false;
+    tasks.forEach((task, idx) => {
+        if (task.patientName === patientName || task.patient === patientName) {
+            tasks[idx] = {...task, patientName: editedData.patientName || editedData['Patient Name'] || patientName, lastModified: new Date().toISOString()};
+            tasksUpdated = true;
+        }
+    });
+    if (tasksUpdated) {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+    
+    // Update notes that reference this patient
+    let notes = JSON.parse(localStorage.getItem('notes') || '[]');
+    let notesUpdated = false;
+    notes.forEach((note, idx) => {
+        if (note.patientName === patientName || note.patient === patientName) {
+            notes[idx] = {...note, patientName: editedData.patientName || editedData['Patient Name'] || patientName, lastModified: new Date().toISOString()};
+            notesUpdated = true;
+        }
+    });
+    if (notesUpdated) {
+        localStorage.setItem('notes', JSON.stringify(notes));
+    }
+}
+
+/**
+ * Cancel edit mode
+ */
+function cancelEditMode(index) {
+    // Simply refresh the patient detail view to discard changes
+    closePatientDetail();
+    showPatientDetail(index);
+}
+
+/**
+ * Close patient detail modal
+ */
+function closePatientDetail() {
+    const modal = document.querySelector('.patient-detail-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+/**
+ * Pin patient from detail view
+ */
+function pinPatientFromDetail(index) {
+    pinPatient(index);
+    closePatientDetail();
+}
+
+/**
+ * Create task from detail view
+ */
+function createTaskFromDetail(index) {
+    createTaskForPatient(index);
+}
+
+/**
+ * Create event from detail view
+ */
+function createEventFromDetail(index) {
+    createEventForPatient(index);
+}
+
+/**
+ * Edit patient information
+ */
+function editPatient(index) {
+    // Close detail view
+    closePatientDetail();
+    
+    // Switch to patient intake tab
+    switchTab('patient-intake', document.querySelector('[data-tab="patient-intake"]'));
+    
+    // Load patient data into form
+    setTimeout(() => {
+        let patient = null;
+        if (currentData.active && currentData.active[index]) {
+            patient = currentData.active[index];
+        } else {
+            const storedPatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+            if (storedPatients[index]) {
+                patient = storedPatients[index];
+            }
+        }
+        
+        if (patient) {
+            // Fill the intake form with patient data
+            const form = document.getElementById('patient-intake-form');
+            if (form) {
+                // Map the data to form fields
+                form.elements['patientName'].value = patient['Patient Name'] || patient.patientName || '';
+                form.elements['dob'].value = patient['DOB'] || patient.dob || '';
+                form.elements['age'].value = patient['Age'] || patient.age || '';
+                form.elements['gender'].value = patient.gender || '';
+                form.elements['address'].value = patient.address || '';
+                form.elements['city'].value = patient.city || '';
+                form.elements['state'].value = patient.state || '';
+                form.elements['zip'].value = patient.zip || '';
+                form.elements['phone'].value = patient['Phone Number'] || patient.phone || '';
+                form.elements['email'].value = patient['Email'] || patient.email || '';
+                form.elements['primaryContact'].value = patient.primaryContact || '';
+                form.elements['primaryContactPhone'].value = patient.primaryContactPhone || '';
+                form.elements['primaryContactRelation'].value = patient.primaryContactRelation || '';
+                form.elements['diagnosis'].value = patient.diagnosis || '';
+                form.elements['secondaryDiagnosis'].value = patient.secondaryDiagnosis || '';
+                form.elements['symptoms'].value = patient.symptoms || '';
+                form.elements['medicalHistory'].value = patient.medicalHistory || '';
+                form.elements['medications'].value = patient.medications || '';
+                form.elements['allergies'].value = patient.allergies || '';
+                form.elements['prognosis'].value = patient.prognosis || '';
+                form.elements['cpDoctor'].value = patient['CP Doctor'] || patient.cpDoctor || '';
+                form.elements['referringPhysician'].value = patient.referringPhysician || '';
+                form.elements['hospice'].value = patient['Hospice'] || patient.hospice || '';
+                form.elements['hospiceNurse'].value = patient.hospiceNurse || '';
+                form.elements['socialWorker'].value = patient.socialWorker || '';
+                form.elements['doula'].value = patient.doula || '';
+                form.elements['medicalId'].value = patient.medicalId || '';
+                form.elements['invoiceAmount'].value = patient['Invoice amount'] || patient.invoiceAmount || '';
+                form.elements['paymentStatus'].value = patient.paymentStatus || 'Pending';
+                form.elements['intakeDate'].value = patient['Ingestion Date'] || patient.intakeDate || '';
+                form.elements['intakeStaff'].value = patient.intakeStaff || '';
+                form.elements['priority'].value = patient.priority || 'Standard';
+                form.elements['specialNeeds'].value = patient.specialNeeds || '';
+                form.elements['notes'].value = patient.notes || '';
+                
+                showNotification('Patient data loaded for editing', 'info');
+            }
+        }
+    }, 500);
 } 

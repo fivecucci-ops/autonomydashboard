@@ -247,4 +247,85 @@ async function addChatMessage(messageData) {
     }
 }
 
-module.exports = { authorize, readActiveTab, readVendorsTab, readChatTab, addChatMessage }; 
+async function writeActiveTab(patientData) {
+    const localFilePath = path.join(__dirname, 'Dashboard Clone.xlsx');
+    
+    try {
+        // Read the existing Excel file
+        const workbook = XLSX.readFile(localFilePath);
+        const worksheet = workbook.Sheets['Active'];
+        
+        if (!worksheet) {
+            throw new Error('Active sheet not found in local file');
+        }
+        
+        // Get existing data
+        const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: null});
+        const headers = rows[0] || [];
+        
+        // Map patient intake data to Excel columns matching exact order
+        // Headers: ti, Date, Patient Name, DOB, Age, Area, Phone Number, Email, 
+        // 1st request, 2nd request, CP Doctor, CP Completed, RXNT Info, WR, Hospice, 
+        // Prescription Submit, [empty], invoice amount, PAID, Check list, Ingestion Date, 
+        // Ingestion Location, TTS (Minutes), TTD (Minutes), Consent Received, Medical Records,
+        // Physician follow up form, EOLOA State, Death Certificate, All Records in DRC, 
+        // [empty], Riverside EOLOA, Referred From
+        
+        const newRow = [
+            '',                                                // ti
+            new Date().toLocaleDateString('en-US'),           // Date
+            patientData.patientName || '',                    // Patient Name
+            patientData.dob || '',                            // DOB
+            patientData.age || '',                            // Age
+            patientData.city || '',                           // Area (now City)
+            patientData.phone || '',                          // Phone Number
+            patientData.email || '',                          // Email
+            '',                                                // 1st request
+            '',                                                // 2nd request
+            patientData.cpDoctor || '',                       // CP Doctor
+            '',                                                // CP Completed
+            '',                                                // RXNT Info
+            '',                                                // WR
+            patientData.hospice || '',                        // Hospice
+            '',                                                // Prescription Submit
+            '',                                                // [empty column]
+            patientData.invoiceAmount || '',                  // invoice amount
+            patientData.paymentStatus === 'Paid' ? 'yes' : 'no', // PAID
+            patientData.checklistStatus === 'Complete' ? 'complete' : '', // Check list
+            patientData.intakeDate || '',                     // Ingestion Date
+            '',                                                // Ingestion Location
+            '',                                                // TTS (Minutes)
+            '',                                                // TTD (Minutes)
+            '',                                                // Consent Received
+            '',                                                // Medical Records
+            '',                                                // Physician follow up form
+            '',                                                // EOLOA State
+            '',                                                // Death Certificate
+            '',                                                // All Records in DRC
+            '',                                                // [empty column]
+            '',                                                // Riverside EOLOA
+            patientData.referringPhysician || ''              // Referred From
+        ];
+        
+        // Add the new row to the data
+        rows.push(newRow);
+        
+        // Create a new worksheet from the updated data
+        const newWorksheet = XLSX.utils.aoa_to_sheet(rows);
+        
+        // Update the workbook
+        workbook.Sheets['Active'] = newWorksheet;
+        
+        // Write back to file
+        XLSX.writeFile(workbook, localFilePath);
+        
+        console.log('Successfully added patient to Active tab:', patientData.patientName);
+        return { success: true, message: 'Patient added to Excel file' };
+        
+    } catch (err) {
+        console.error('Error writing to Excel file:', err);
+        throw new Error(`Failed to write to Excel file: ${err.message}`);
+    }
+}
+
+module.exports = { authorize, readActiveTab, readVendorsTab, readChatTab, addChatMessage, writeActiveTab }; 
