@@ -1563,10 +1563,9 @@ function initializePatientTasks() {
             id: 'ingestion', 
             name: 'Ingestion', 
             subtasks: [
-                { name: 'Patient Prepared', complete: false },
-                { name: 'Medication Administered', complete: false },
-                { name: 'Monitoring Complete', complete: false },
-                { name: 'Documentation Filed', complete: false }
+                { name: 'Ingestion Date', complete: false, subSubtasks: [{ name: 'Date', complete: false, type: 'input' }] },
+                { name: 'Medication Received by Patient', complete: false },
+                { name: 'Medication Taken by Patient', complete: false }
             ]
         },
         { 
