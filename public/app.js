@@ -1526,9 +1526,13 @@ function initializePatientTasks() {
             id: 'consulting', 
             name: 'Consulting Form', 
             subtasks: [
-                { name: 'Physician Consultation', complete: false },
-                { name: 'Form Completed', complete: false },
-                { name: 'Submitted to Office', complete: false }
+                { 
+                    name: 'Received', 
+                    complete: false,
+                    subSubtasks: [
+                        { name: 'CP Name', type: 'input', value: '', complete: false }
+                    ]
+                }
             ]
         },
         { 
