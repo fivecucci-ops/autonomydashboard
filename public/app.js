@@ -1474,10 +1474,8 @@ function initializePatientTasks() {
             id: 'records', 
             name: 'Medical Records', 
             subtasks: [
-                { name: 'Records Requested', complete: false },
-                { name: 'Records Received', complete: false },
-                { name: 'Records Reviewed', complete: false },
-                { name: 'Filed in System', complete: false }
+                { name: 'Request Medical Records', complete: false },
+                { name: 'Medical Records Received', complete: false }
             ]
         },
         { 
