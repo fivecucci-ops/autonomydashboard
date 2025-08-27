@@ -1539,7 +1539,7 @@ function initializePatientTasks() {
             id: 'rxnt', 
             name: 'RXNT', 
             subtasks: [
-                { name: 'Client Information Inputted', complete: false },
+                { name: 'Patient Information Inputted', complete: false },
                 { 
                     name: 'Prescription', 
                     complete: false,
