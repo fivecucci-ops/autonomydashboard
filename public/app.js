@@ -1777,7 +1777,23 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
         // Standard logic for other tasks
         task.subtasks.forEach(subtask => {
             totalSubtasks++;
-            if (subtask.complete) completedSubtasks++;
+            
+            // Check if subtask is complete (including sub-subtasks)
+            if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
+                // For subtasks with sub-subtasks, check if all sub-subtasks are complete
+                let allSubSubtasksComplete = true;
+                subtask.subSubtasks.forEach(subSubtask => {
+                    if (!subSubtask.complete) {
+                        allSubSubtasksComplete = false;
+                    }
+                });
+                if (allSubSubtasksComplete) {
+                    completedSubtasks++;
+                }
+            } else {
+                // For regular subtasks without sub-subtasks
+                if (subtask.complete) completedSubtasks++;
+            }
         });
     }
     
