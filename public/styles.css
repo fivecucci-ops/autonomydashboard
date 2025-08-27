@@ -1483,23 +1483,24 @@ body.dark-mode {
 /* End Timeline Styles */ 
 
 .timelines-container {
-    display: flex;
-    flex-direction: column; /* Stack cards vertically for better readability */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 20px;
-    align-items: stretch; /* Stretch cards to full width */
     width: 100%;
+    align-items: start;
 }
 
 .patient-timeline-card {
-    flex: 1 1 500px; /* Increased minimum width for better content display */
-    min-width: 500px; /* Ensure minimum width */
-    max-width: 800px; /* Increased max width to prevent content cutoff */
+    width: 100%;
+    min-width: 350px;
+    max-width: 450px;
     margin: 0;
     border: 1px solid #ddd;
     border-radius: 8px;
     background: #f9f9f9;
     transition: all 0.3s ease;
     overflow: visible; /* Ensure content isn't cut off */
+    height: fit-content; /* Adjust height to content */
 }
 
 .patient-timeline-card.collapsed {
@@ -1589,6 +1590,8 @@ body.dark-mode {
 .timeline-tasks {
     padding: 15px;
     background: #f9f9f9;
+    min-height: 600px; /* Ensure minimum height for all 11 tasks */
+    height: fit-content; /* Allow expansion based on content */
 }
 
 /* Dark mode adjustments */
@@ -1598,15 +1601,34 @@ body.dark-mode {
 }
 
 /* Responsive design for timeline cards */
-@media (max-width: 768px) {
+@media (min-width: 1200px) {
+    .timelines-container {
+        grid-template-columns: repeat(4, 1fr); /* 4 columns on very wide screens */
+    }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+    .timelines-container {
+        grid-template-columns: repeat(3, 1fr); /* 3 columns on wide screens */
+    }
+}
+
+@media (min-width: 600px) and (max-width: 899px) {
+    .timelines-container {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns on medium screens */
+    }
+}
+
+@media (max-width: 599px) {
+    .timelines-container {
+        grid-template-columns: 1fr; /* 1 column on small screens */
+        padding: 0 10px;
+    }
+    
     .patient-timeline-card {
         min-width: 100%;
         max-width: 100%;
         margin: 10px 0;
-    }
-    
-    .timelines-container {
-        padding: 0 10px;
     }
     
     .task-header {
@@ -2661,6 +2683,9 @@ body.dark-mode {
     font-size: 1.05em;
     color: #333;
     margin-bottom: 5px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
 }
 
 .task-status {
