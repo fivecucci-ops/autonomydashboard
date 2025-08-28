@@ -4302,12 +4302,12 @@ function downloadForm(formType) {
     // This function handles PDF downloads from the forms folder
     
     const formNames = {
-        'patient-intake': 'Patient Intake Form',
-        'medical-records': 'Medical Records Request Form',
-        'prescription': 'Prescription Form',
-        'attending-checklist': 'Attending Checklist Form',
-        'consulting-form': 'Consulting Form',
-        'follow-up-form': 'Follow-up Form'
+        'gaja-regular-dose': 'Gaja - Regular Dose',
+        'gaja-high-dose': 'Gaja - High Dose',
+        'von-gunten-regular-dose': 'Von Gunten - Regular Dose',
+        'von-gunten-high-dose': 'Von Gunten - High Dose',
+        'unknown-cp-regular-dose': 'Unknown CP - Regular Dose',
+        'unknown-cp-high-dose': 'Unknown CP - High Dose'
     };
     
     const formName = formNames[formType] || 'Form';

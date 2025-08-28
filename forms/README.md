@@ -4,12 +4,12 @@ This folder contains the 6 PDF forms that users can download from the dashboard.
 
 ## Required PDF Files
 
-1. **Patient Intake Form** - `patient-intake.pdf`
-2. **Medical Records Request** - `medical-records.pdf`
-3. **Prescription Form** - `prescription.pdf`
-4. **Attending Checklist** - `attending-checklist.pdf`
-5. **Consulting Form** - `consulting-form.pdf`
-6. **Follow-up Form** - `follow-up-form.pdf`
+1. **Gaja - Regular Dose** - `gaja-regular-dose.pdf`
+2. **Gaja - High Dose** - `gaja-high-dose.pdf`
+3. **Von Gunten - Regular Dose** - `von-gunten-regular-dose.pdf`
+4. **Von Gunten - High Dose** - `von-gunten-high-dose.pdf`
+5. **Unknown CP - Regular Dose** - `unknown-cp-regular-dose.pdf`
+6. **Unknown CP - High Dose** - `unknown-cp-high-dose.pdf`
 
 ## How to Add Your PDFs
 
@@ -20,24 +20,24 @@ This folder contains the 6 PDF forms that users can download from the dashboard.
 
 ## Current Status
 
-- ✅ **Patient Intake Form** - Ready for PDF
-- ✅ **Medical Records Request** - Ready for PDF  
-- ✅ **Prescription Form** - Ready for PDF
-- ✅ **Attending Checklist** - Ready for PDF
-- ✅ **Consulting Form** - Ready for PDF
-- ✅ **Follow-up Form** - Ready for PDF
+- ✅ **Gaja - Regular Dose** - Ready for PDF
+- ✅ **Gaja - High Dose** - Ready for PDF  
+- ✅ **Von Gunten - Regular Dose** - Ready for PDF
+- ✅ **Von Gunten - High Dose** - Ready for PDF
+- ✅ **Unknown CP - Regular Dose** - Ready for PDF
+- ✅ **Unknown CP - High Dose** - Ready for PDF
 
 ## File Structure
 
 ```
 forms/
 ├── README.md
-├── patient-intake.pdf          ← Add your PDF here
-├── medical-records.pdf         ← Add your PDF here
-├── prescription.pdf            ← Add your PDF here
-├── attending-checklist.pdf     ← Add your PDF here
-├── consulting-form.pdf         ← Add your PDF here
-└── follow-up-form.pdf          ← Add your PDF here
+├── gaja-regular-dose.pdf       ← Add your PDF here
+├── gaja-high-dose.pdf          ← Add your PDF here
+├── von-gunten-regular-dose.pdf ← Add your PDF here
+├── von-gunten-high-dose.pdf    ← Add your PDF here
+├── unknown-cp-regular-dose.pdf ← Add your PDF here
+└── unknown-cp-high-dose.pdf    ← Add your PDF here
 ```
 
 ## Notes
