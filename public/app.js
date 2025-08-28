@@ -4296,4 +4296,56 @@ function editPatient(index) {
             }
         }
     }, 500);
+}
+
+function downloadForm(formType) {
+    // This function handles PDF downloads from the forms folder
+    
+    const formNames = {
+        'patient-intake': 'Patient Intake Form',
+        'medical-records': 'Medical Records Request Form',
+        'prescription': 'Prescription Form',
+        'attending-checklist': 'Attending Checklist Form',
+        'consulting-form': 'Consulting Form',
+        'follow-up-form': 'Follow-up Form'
+    };
+    
+    const formName = formNames[formType] || 'Form';
+    const pdfFileName = `${formType}.pdf`;
+    const pdfPath = `/forms/${pdfFileName}`;
+    
+    // Check if the PDF file exists
+    fetch(pdfPath, { method: 'HEAD' })
+        .then(response => {
+            if (response.ok) {
+                // PDF exists, download it
+                const link = document.createElement('a');
+                link.href = pdfPath;
+                link.download = pdfFileName;
+                link.style.display = 'none';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showNotification(`${formName} downloaded successfully!`, 'success');
+            } else {
+                // PDF doesn't exist, show placeholder message
+                showNotification(`${formName} PDF not found. Please add the PDF file to the forms folder.`, 'warning');
+                
+                // Create a temporary download link with instructions
+                const link = document.createElement('a');
+                link.href = `data:text/plain;charset=utf-8,${encodeURIComponent(`${formName}\n\nPDF file not found: ${pdfFileName}\n\nTo add this PDF:\n1. Place ${pdfFileName} in the 'forms' folder\n2. Restart the server\n3. Try downloading again`)}`;
+                link.download = `${formName}-instructions.txt`;
+                link.style.display = 'none';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking PDF:', error);
+            showNotification(`Error downloading ${formName}. Please try again.`, 'error');
+        });
 } 

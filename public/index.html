@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alyssa's Dashboard</title>
-    <link rel="stylesheet" href="styles.css?v=4.2">
+    <link rel="stylesheet" href="styles.css?v=4.3">
 </head>
 <body>
     <!-- Authentication Container -->
@@ -71,6 +71,7 @@
                 <li data-tab="notes">📋 All Notes</li>
                 <li data-tab="calendar">📅 Calendar</li>
                 <li data-tab="todos">📝 Todos</li>
+                <li data-tab="checklist-forms">Checklist Forms</li>
             </ul>
         </div>
         
@@ -96,6 +97,50 @@
                 <h2>Todo List</h2>
                 <div id="todo-list"></div>
                 <button onclick="createNewTask()">Add New Task</button>
+            </div>
+
+            <div id="checklist-forms" class="tab-content" style="display: none;">
+                <h2>📋 Checklist Forms</h2>
+                <div class="forms-container">
+                    <div class="forms-grid">
+                        <div class="form-card">
+                            <div class="form-icon">📄</div>
+                            <h3>Patient Intake Form</h3>
+                            <p>Complete patient information and medical history</p>
+                            <button class="download-btn" onclick="downloadForm('patient-intake')">Download PDF</button>
+                        </div>
+                        <div class="form-card">
+                            <div class="form-icon">🏥</div>
+                            <h3>Medical Records Request</h3>
+                            <p>Request medical records from healthcare providers</p>
+                            <button class="download-btn" onclick="downloadForm('medical-records')">Download PDF</button>
+                        </div>
+                        <div class="form-card">
+                            <div class="form-icon">💊</div>
+                            <h3>Prescription Form</h3>
+                            <p>Document prescription details and dosage</p>
+                            <button class="download-btn" onclick="downloadForm('prescription')">Download PDF</button>
+                        </div>
+                        <div class="form-card">
+                            <div class="form-icon">📋</div>
+                            <h3>Attending Checklist</h3>
+                            <p>Complete attending physician checklist</p>
+                            <button class="download-btn" onclick="downloadForm('attending-checklist')">Download PDF</button>
+                        </div>
+                        <div class="form-card">
+                            <div class="form-icon">👨‍⚕️</div>
+                            <h3>Consulting Form</h3>
+                            <p>Consulting physician documentation</p>
+                            <button class="download-btn" onclick="downloadForm('consulting-form')">Download PDF</button>
+                        </div>
+                        <div class="form-card">
+                            <div class="form-icon">📝</div>
+                            <h3>Follow-up Form</h3>
+                            <p>Patient follow-up and EOLOA documentation</p>
+                            <button class="download-btn" onclick="downloadForm('follow-up-form')">Download PDF</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -151,7 +196,7 @@
             </div>
             <div class="pinned-patient-actions">
                 <button class="pin-action-btn" onclick="createTaskForPinned()">📝 Add Task</button>
-                <button class="pin-action-btn" onclick="createEventForPinned()">�� Add Event</button>
+                <button class="pin-action-btn" onclick="createEventForPinned()">📅 Add Event</button>
                 <button class="pin-action-btn" onclick="callPatient()">📞 Call</button>
                 <button class="pin-action-btn" onclick="emailPatient()">📧 Email</button>
                 <button class="pin-action-btn unpin" onclick="unpinPatient()">📌 Unpin</button>

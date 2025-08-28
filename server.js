@@ -6,7 +6,12 @@ const { authorize, readActiveTab, readVendorsTab, readChatTab, addChatMessage, w
 const app = express();
 const port = 3000;
 
+// Serve static files from public directory
 app.use(express.static('public'));
+
+// Serve PDF files from forms directory
+app.use('/forms', express.static('forms'));
+
 app.use(express.json());
 
 // Example API endpoint for reading Active tab
