@@ -1730,10 +1730,7 @@ function generateSubtasks(task, patientId, taskIndex) {
                                     ${subSubtask.complete ? 'checked' : ''}
                                     onchange="toggleSubSubtask('${patientId}', ${taskIndex}, ${subIndex}, ${subSubIndex})">
                                 <label for="sub-subtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}">${subSubtask.name}</label>
-                                ${subSubtask.name === 'Completed by Patient' && subtask.name === 'Written Request' ? 
-                                    `<button class="download-completed-btn" onclick="downloadCompletedForm('${patientId}')" title="Download completed form">
-                                        📄 Download
-                                    </button>` : ''}
+
                             </li>
                         `;
                     }
