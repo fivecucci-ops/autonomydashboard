@@ -1402,15 +1402,15 @@ async function loadPatientTimelines() {
             '</div>' +
             '<div class="simple-stats">' +
             '  <div class="stat-item">' +
-            '    <span class="stat-number">${data.length}</span>' +
+            '    <span class="stat-number">' + data.length + '</span>' +
             '    <span class="stat-label">Total Patients</span>' +
             '  </div>' +
             '  <div class="stat-item">' +
-            '    <span class="stat-number">${data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) < 100).length}</span>' +
+            '    <span class="stat-number">' + data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) < 100).length + '</span>' +
             '    <span class="stat-label">Incomplete</span>' +
             '  </div>' +
             '  <div class="stat-item">' +
-            '    <span class="stat-number">${data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) === 100).length}</span>' +
+            '    <span class="stat-number">' + data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) === 100).length + '</span>' +
             '    <span class="stat-label">Complete</span>' +
             '  </div>' +
             '</div>' +
