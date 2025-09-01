@@ -1467,6 +1467,9 @@ async function loadPatientTimelines() {
         }
         
         setStatus('Timelines loaded', 'success');
+        
+        // Mark all tasks complete for Adam Jones
+        markAllTasksComplete('Adam Jones');
     } catch (error) {
         console.error('Error loading timelines:', error);
         showError(`Failed to load timelines: ${error.message}`);
@@ -1728,6 +1731,59 @@ function deleteArchivedPatient(archivedIndex) {
             console.error('Delete error:', error);
             showNotification('Failed to delete patient. Please try again.', 'error');
         }
+    }
+}
+
+// Mark all tasks as complete for a specific patient
+function markAllTasksComplete(patientName) {
+    try {
+        const patients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        const patientIndex = patients.findIndex(p => 
+            (p['Patient Name'] && p['Patient Name'].toLowerCase().includes(patientName.toLowerCase())) ||
+            (p.patientName && p.patientName.toLowerCase().includes(patientName.toLowerCase()))
+        );
+        
+        if (patientIndex === -1) {
+            showNotification(`Patient "${patientName}" not found in active patients`, 'error');
+            return;
+        }
+        
+        const patientId = `patient-${patientIndex}`;
+        
+        // Initialize task completion data if not exists
+        if (!window.taskCompletionData[patientId]) {
+            window.taskCompletionData[patientId] = initializePatientTasks();
+        }
+        
+        // Mark all tasks and subtasks as complete
+        const tasks = window.taskCompletionData[patientId];
+        tasks.forEach(task => {
+            // Mark all subtasks as complete
+            task.subtasks.forEach(subtask => {
+                subtask.complete = true;
+                
+                // Mark all sub-subtasks as complete
+                if (subtask.subSubtasks) {
+                    subtask.subSubtasks.forEach(subSubtask => {
+                        subSubtask.complete = true;
+                    });
+                }
+            });
+        });
+        
+        // Save the updated task completion data
+        localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+        
+        showNotification(`All tasks marked as complete for ${patientName}!`, 'success');
+        
+        // Reload the timeline to show updated progress
+        setTimeout(() => {
+            loadPatientTimelines();
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Error marking tasks complete:', error);
+        showNotification('Failed to mark tasks as complete. Please try again.', 'error');
     }
 }
 
