@@ -1395,6 +1395,42 @@ async function loadPatientTimelines() {
             '    <button onclick="filterTimelines(\'all\')">Show All</button>' +
             '  </div>' +
             '</div>' +
+            '<div class="search-filter-section">' +
+            '  <div class="search-section">' +
+            '    <input type="text" id="patient-search" placeholder="Search patients by name..." class="search-input">' +
+            '    <button onclick="clearSearch()" class="clear-search-btn">Clear</button>' +
+            '  </div>' +
+            '  <div class="filter-section">' +
+            '    <select id="status-filter" class="status-filter" onchange="filterPatients()">' +
+            '      <option value="all">All Patients</option>' +
+            '      <option value="incomplete">Incomplete Only</option>' +
+            '      <option value="complete">Complete Only</option>' +
+            '    </select>' +
+            '    <select id="dose-filter" class="dose-filter" onchange="filterPatients()">' +
+            '      <option value="all">All Dose Levels</option>' +
+            '      <option value="high">High Dose Only</option>' +
+            '      <option value="regular">Regular Dose Only</option>' +
+            '    </select>' +
+            '  </div>' +
+            '</div>' +
+            '<div class="status-dashboard">' +
+            '  <div class="status-card total">' +
+            '    <div class="status-number">${data.length}</div>' +
+            '    <div class="status-label">Total Patients</div>' +
+            '  </div>' +
+            '  <div class="status-card incomplete">' +
+            '    <div class="status-number">${data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) < 100).length}</div>' +
+            '    <div class="status-label">Incomplete</div>' +
+            '  </div>' +
+            '  <div class="status-card complete">' +
+            '    <div class="status-number">${data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) === 100).length}</div>' +
+            '    <div class="status-label">Complete</div>' +
+            '  </div>' +
+            '  <div class="status-card high-dose">' +
+            '    <div class="status-number">${data.filter(p => p.doseLevel === "high").length}</div>' +
+            '    <div class="status-label">High Dose</div>' +
+            '  </div>' +
+            '</div>' +
             '<div class="timelines-container">';
         
         data.forEach((patient, index) => {
@@ -1431,11 +1467,65 @@ async function loadPatientTimelines() {
         });
         html += '</div>';
         content.innerHTML = html;
+        
+        // Add search functionality
+        const searchInput = document.getElementById('patient-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', filterPatients);
+        }
+        
         setStatus('Timelines loaded', 'success');
     } catch (error) {
         console.error('Error loading timelines:', error);
         showError(`Failed to load timelines: ${error.message}`);
     }
+}
+
+// Filter patients based on search and filter criteria
+function filterPatients() {
+    const searchTerm = document.getElementById('patient-search')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('status-filter')?.value || 'all';
+    const doseFilter = document.getElementById('dose-filter')?.value || 'all';
+    
+    const patientCards = document.querySelectorAll('.patient-timeline-card');
+    
+    patientCards.forEach(card => {
+        const patientName = card.querySelector('.patient-info h3')?.textContent.toLowerCase() || '';
+        const progressText = card.querySelector('.progress-text')?.textContent || '';
+        const progress = parseInt(progressText) || 0;
+        
+        // Check if patient matches search term
+        const matchesSearch = patientName.includes(searchTerm);
+        
+        // Check if patient matches status filter
+        let matchesStatus = true;
+        if (statusFilter === 'incomplete' && progress === 100) matchesStatus = false;
+        if (statusFilter === 'complete' && progress < 100) matchesStatus = false;
+        
+        // Check if patient matches dose filter (this would need to be implemented based on your data structure)
+        let matchesDose = true;
+        // TODO: Implement dose filtering based on patient data
+        
+        // Show/hide patient card based on filters
+        if (matchesSearch && matchesStatus && matchesDose) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Clear search and reset filters
+function clearSearch() {
+    const searchInput = document.getElementById('patient-search');
+    const statusFilter = document.getElementById('status-filter');
+    const doseFilter = document.getElementById('dose-filter');
+    
+    if (searchInput) searchInput.value = '';
+    if (statusFilter) statusFilter.value = 'all';
+    if (doseFilter) doseFilter.value = 'all';
+    
+    filterPatients();
 }
 
 // Initialize patient tasks with subtasks and sub-subtasks
