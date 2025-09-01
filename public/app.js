@@ -629,6 +629,16 @@ async function loadDashboard() {
             throw new Error('No data received from server');
         }
         
+        // Merge with localStorage data to include newly added patients
+        let localPatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        const patientNames = new Set(data.map(p => p['Patient Name'] || p.patientName));
+        localPatients.forEach(patient => {
+            const name = patient['Patient Name'] || patient.patientName;
+            if (!patientNames.has(name)) {
+                data.push(patient);
+            }
+        });
+        
         // Store data globally
         currentData.active = data;
         
@@ -636,6 +646,9 @@ async function loadDashboard() {
         const avgAge = calculateAverageAge(data);
         const paidCount = countPaidInvoices(data);
         const completedCount = countCompletedCases(data);
+        
+        // Get 5 most recently added patients
+        const recentPatients = getRecentPatients(data, 5);
         
         // Create dashboard content
         const content = document.getElementById('content');
@@ -666,13 +679,13 @@ async function loadDashboard() {
                 </div>
             </div>
             
-            <h2>Recent Active Patients</h2>
+            <h2>Most Recently Added Patients</h2>
             <div class="recent-patients-section">
                 <div class="section-header">
-                    <span>Showing ${Math.min(5, data.length)} of ${data.length} patients</span>
+                    <span>Showing ${recentPatients.length} of ${data.length} patients</span>
                     <button class="view-all-btn" onclick="switchToActiveData()">View All Active Patients →</button>
                 </div>
-                ${generatePatientTable(data.slice(0, 5))}
+                ${generateRecentPatientCards(recentPatients)}
             </div>
         `;
         
@@ -726,7 +739,7 @@ async function loadActivePatients() {
         // Store data globally
         currentData.active = localPatients;
         
-        // Create patient table
+        // Create patient sections
         const content = document.getElementById('content');
         content.innerHTML = `
             <div class="active-header">
@@ -734,9 +747,10 @@ async function loadActivePatients() {
                 <div class="active-view-toggle">
                     <button class="btn-secondary" onclick="switchToTableView()">Table</button>
                     <button class="btn-primary" onclick="switchToCardView()">Cards</button>
+                    <button class="btn-secondary" onclick="switchToSectionView()">Sections</button>
                 </div>
             </div>
-            ${localPatients.length > 0 ? generateActivePatientCards(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+            ${localPatients.length > 0 ? generateActivePatientSections(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
         `;
         
         setStatus('Active patients loaded successfully', 'success');
@@ -1950,6 +1964,191 @@ function deleteArchivedPatient(archivedIndex) {
             showNotification('Failed to delete patient. Please try again.', 'error');
         }
     }
+}
+
+// Generate individual patient sections for Active Patients tab
+function generateActivePatientSections(patients) {
+    if (!patients || patients.length === 0) {
+        return '<p>No active patients found.</p>';
+    }
+    
+    let html = '<div class="patient-sections-container">';
+    
+    patients.forEach((patient, index) => {
+        const patientName = patient['Patient Name'] || patient.patientName || 'Unknown';
+        const age = patient['Age'] || patient.age || 'N/A';
+        const city = patient['City'] || patient.city || 'N/A';
+        const hospice = patient['Hospice'] || patient.hospice || 'N/A';
+        const phone = patient['Phone Number'] || patient.phone || 'N/A';
+        const email = patient['Email'] || patient.email || 'N/A';
+        const doseLevel = patient['Dose Level'] || patient.doseLevel || 'Regular';
+        const dateSubmitted = patient['Date Submitted'] || patient.dateSubmittedFormatted || 'N/A';
+        const cpDoctor = patient['CP Doctor'] || patient.cpDoctor || 'N/A';
+        const invoiceAmount = patient['Invoice amount'] || patient.invoiceAmount || 'N/A';
+        const paymentStatus = patient['PAID'] || patient.paymentStatus || 'Pending';
+        
+        html += `
+            <div class="patient-section" id="patient-section-${index}">
+                <div class="patient-section-header">
+                    <h3>${patientName}</h3>
+                    <div class="patient-section-actions">
+                        <button class="btn-small" onclick="viewPatientTimeline(${index})">View Timeline</button>
+                        <button class="btn-small" onclick="editPatient(${index})">Edit</button>
+                    </div>
+                </div>
+                
+                <div class="patient-section-content">
+                    <div class="patient-info-grid">
+                        <div class="info-group">
+                            <h4>Basic Information</h4>
+                            <div class="info-item">
+                                <span class="info-label">Age:</span>
+                                <span class="info-value">${age}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">City:</span>
+                                <span class="info-value">${city}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Dose Level:</span>
+                                <span class="info-value dose-${doseLevel.toLowerCase()}">${doseLevel}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-group">
+                            <h4>Contact Information</h4>
+                            <div class="info-item">
+                                <span class="info-label">Phone:</span>
+                                <span class="info-value">${phone}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Email:</span>
+                                <span class="info-value">${email}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-group">
+                            <h4>Medical Information</h4>
+                            <div class="info-item">
+                                <span class="info-label">Hospice:</span>
+                                <span class="info-value">${hospice}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">CP Doctor:</span>
+                                <span class="info-value">${cpDoctor}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-group">
+                            <h4>Administrative</h4>
+                            <div class="info-item">
+                                <span class="info-label">Date Submitted:</span>
+                                <span class="info-value">${dateSubmitted}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Invoice Amount:</span>
+                                <span class="info-value">$${invoiceAmount}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Payment Status:</span>
+                                <span class="info-value status-${paymentStatus.toLowerCase()}">${paymentStatus}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    return html;
+}
+
+// Get most recently added patients
+function getRecentPatients(patients, limit = 5) {
+    return patients
+        .filter(patient => patient.dateSubmitted || patient.dateSubmittedFormatted)
+        .sort((a, b) => {
+            const dateA = new Date(a.dateSubmitted || a.dateSubmittedFormatted || 0);
+            const dateB = new Date(b.dateSubmitted || b.dateSubmittedFormatted || 0);
+            return dateB - dateA; // Most recent first
+        })
+        .slice(0, limit);
+}
+
+// Generate recent patient cards for dashboard
+function generateRecentPatientCards(patients) {
+    if (!patients || patients.length === 0) {
+        return '<p>No recently added patients found.</p>';
+    }
+    
+    let html = '<div class="recent-patients-grid">';
+    
+    patients.forEach((patient, index) => {
+        const patientName = patient['Patient Name'] || patient.patientName || 'Unknown';
+        const age = patient['Age'] || patient.age || 'N/A';
+        const city = patient['City'] || patient.city || 'N/A';
+        const doseLevel = patient['Dose Level'] || patient.doseLevel || 'Regular';
+        const dateSubmitted = patient['Date Submitted'] || patient.dateSubmittedFormatted || 'N/A';
+        const hospice = patient['Hospice'] || patient.hospice || 'N/A';
+        
+        html += `
+            <div class="recent-patient-card" onclick="viewPatientTimeline(${index})">
+                <div class="recent-patient-header">
+                    <h4>${patientName}</h4>
+                    <span class="recent-patient-date">${dateSubmitted}</span>
+                </div>
+                <div class="recent-patient-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Age:</span>
+                        <span class="detail-value">${age}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">City:</span>
+                        <span class="detail-value">${city}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Hospice:</span>
+                        <span class="detail-value">${hospice}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Dose:</span>
+                        <span class="detail-value dose-${doseLevel.toLowerCase()}">${doseLevel}</span>
+                    </div>
+                </div>
+                <div class="recent-patient-actions">
+                    <button class="btn-small" onclick="event.stopPropagation(); viewPatientTimeline(${index})">View Timeline</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    return html;
+}
+
+// Switch to section view
+function switchToSectionView() {
+    const patients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+    const content = document.getElementById('content');
+    
+    // Update button states
+    document.querySelectorAll('.active-view-toggle button').forEach(btn => btn.classList.remove('btn-primary'));
+    document.querySelectorAll('.active-view-toggle button').forEach(btn => btn.classList.add('btn-secondary'));
+    event.target.classList.remove('btn-secondary');
+    event.target.classList.add('btn-primary');
+    
+    content.innerHTML = `
+        <div class="active-header">
+            <h1>Active Patients (${patients.length})</h1>
+            <div class="active-view-toggle">
+                <button class="btn-secondary" onclick="switchToTableView()">Table</button>
+                <button class="btn-secondary" onclick="switchToCardView()">Cards</button>
+                <button class="btn-primary" onclick="switchToSectionView()">Sections</button>
+            </div>
+        </div>
+        ${patients.length > 0 ? generateActivePatientSections(patients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+    `;
 }
 
 // Mark all tasks as complete for a specific patient
@@ -3953,13 +4152,20 @@ async function handleIntakeSubmit(e) {
     const formData = new FormData(e.target);
     const patientData = Object.fromEntries(formData);
     
+    // Add submission date
+    const now = new Date();
+    patientData.dateSubmitted = now.toISOString();
+    patientData.dateSubmittedFormatted = now.toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
     // Keep the intake date from the form if provided, otherwise use current date
     if (!patientData.intakeDate) {
-        patientData.intakeDate = new Date().toLocaleDateString('en-US', {
-            month: '2-digit',
-            day: '2-digit',
-            year: 'numeric'
-        });
+        patientData.intakeDate = new Date().toISOString().split('T')[0];
     }
     patientData.lastModified = new Date().toISOString();
     
@@ -4013,7 +4219,9 @@ function savePatientToLocal(patientData) {
         'Ingestion Date': patientData.intakeDate,
         'Invoice amount': patientData.invoiceAmount,
         'PAID': patientData.paymentStatus === 'Paid' ? 'yes' : 'no',
-        'Check list': 'In Progress'
+        'Check list': 'In Progress',
+        'Date Submitted': patientData.dateSubmittedFormatted,
+        'Dose Level': patientData.doseLevel
     };
     
     // Get existing active patients list
