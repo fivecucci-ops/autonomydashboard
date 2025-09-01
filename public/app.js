@@ -25,6 +25,9 @@ window.setStatus = setStatus;
 function initMainApp() {
     console.log('Initializing main app');
     
+    // Load all persisted data first
+    loadPersistedData();
+    
     setupEventListeners();
     loadPinnedPatient();
     
@@ -37,6 +40,214 @@ function initMainApp() {
 }
 
 /**
+ * Load all persisted data from localStorage
+ */
+function loadPersistedData() {
+    try {
+        // Load task completion data
+        const savedTaskData = localStorage.getItem('taskCompletionData');
+        if (savedTaskData) {
+            window.taskCompletionData = JSON.parse(savedTaskData);
+            console.log('Loaded task completion data:', Object.keys(window.taskCompletionData).length, 'patients');
+        } else {
+            window.taskCompletionData = {};
+        }
+        
+        // Load workflow data
+        const savedWorkflowData = localStorage.getItem('workflowData');
+        if (savedWorkflowData) {
+            window.workflowData = JSON.parse(savedWorkflowData);
+            console.log('Loaded workflow data');
+        }
+        
+        // Load form data for all tabs
+        loadAllFormData();
+        
+        console.log('All persisted data loaded successfully');
+        
+    } catch (error) {
+        console.error('Error loading persisted data:', error);
+        // Initialize empty objects if loading fails
+        window.taskCompletionData = {};
+        window.workflowData = {};
+    }
+}
+
+/**
+ * Load form data for all tabs
+ */
+function loadAllFormData() {
+    // Load patient intake form data
+    loadPatientIntakeFormData();
+    
+    // Load any other form data that might exist
+    loadGenericFormData();
+}
+
+/**
+ * Load patient intake form data
+ */
+function loadPatientIntakeFormData() {
+    const savedFormData = localStorage.getItem('patientIntakeFormData');
+    if (savedFormData) {
+        try {
+            const formData = JSON.parse(savedFormData);
+            // Apply saved data to form fields when the form is loaded
+            window.savedPatientIntakeData = formData;
+        } catch (error) {
+            console.error('Error loading patient intake form data:', error);
+        }
+    }
+}
+
+/**
+ * Load generic form data for other tabs
+ */
+function loadGenericFormData() {
+    // Load any other form data that might be saved
+    const savedFormData = localStorage.getItem('genericFormData');
+    if (savedFormData) {
+        try {
+            window.genericFormData = JSON.parse(savedFormData);
+        } catch (error) {
+            console.error('Error loading generic form data:', error);
+        }
+    }
+}
+
+/**
+ * Setup auto-save listeners for all form elements
+ */
+function setupAutoSaveListeners() {
+    // Use event delegation to catch all form interactions
+    document.addEventListener('change', (e) => {
+        if (e.target.matches('input, select, textarea')) {
+            autoSaveFormData(e.target);
+        }
+    });
+    
+    document.addEventListener('input', (e) => {
+        if (e.target.matches('input[type="text"], input[type="email"], input[type="tel"], textarea')) {
+            // Debounce text inputs to avoid too many saves
+            clearTimeout(e.target.autoSaveTimeout);
+            e.target.autoSaveTimeout = setTimeout(() => {
+                autoSaveFormData(e.target);
+            }, 1000);
+        }
+    });
+}
+
+/**
+ * Auto-save form data for a specific element
+ */
+function autoSaveFormData(element) {
+    try {
+        const currentTab = getCurrentTabName();
+        if (!currentTab) return;
+        
+        // Get the form or container element
+        const form = element.closest('form') || element.closest('.tab-content') || element.closest('#content');
+        if (!form) return;
+        
+        // Collect all form data in this container
+        const formData = collectFormData(form);
+        
+        // Save to localStorage with tab-specific key
+        const storageKey = `formData_${currentTab}`;
+        localStorage.setItem(storageKey, JSON.stringify(formData));
+        
+        console.log(`Auto-saved form data for ${currentTab}`);
+        
+    } catch (error) {
+        console.error('Error auto-saving form data:', error);
+    }
+}
+
+/**
+ * Save current form data before tab switch
+ */
+function saveCurrentFormData() {
+    try {
+        const currentTab = getCurrentTabName();
+        if (!currentTab) return;
+        
+        const content = document.getElementById('content');
+        if (!content) return;
+        
+        const formData = collectFormData(content);
+        const storageKey = `formData_${currentTab}`;
+        localStorage.setItem(storageKey, JSON.stringify(formData));
+        
+    } catch (error) {
+        console.error('Error saving current form data:', error);
+    }
+}
+
+/**
+ * Get current tab name
+ */
+function getCurrentTabName() {
+    const activeTab = document.querySelector('#sidebar li.active');
+    return activeTab ? activeTab.dataset.tab : null;
+}
+
+/**
+ * Collect all form data from a container
+ */
+function collectFormData(container) {
+    const formData = {};
+    
+    // Get all form elements
+    const inputs = container.querySelectorAll('input, select, textarea');
+    
+    inputs.forEach(input => {
+        const name = input.name || input.id || input.className;
+        if (!name) return;
+        
+        if (input.type === 'checkbox' || input.type === 'radio') {
+            formData[name] = input.checked;
+        } else {
+            formData[name] = input.value;
+        }
+    });
+    
+    return formData;
+}
+
+/**
+ * Restore form data for a specific tab
+ */
+function restoreFormData(tabName) {
+    try {
+        const storageKey = `formData_${tabName}`;
+        const savedData = localStorage.getItem(storageKey);
+        
+        if (!savedData) return;
+        
+        const formData = JSON.parse(savedData);
+        const content = document.getElementById('content');
+        if (!content) return;
+        
+        // Apply saved data to form elements
+        Object.keys(formData).forEach(key => {
+            const element = content.querySelector(`[name="${key}"], #${key}, .${key}`);
+            if (element) {
+                if (element.type === 'checkbox' || element.type === 'radio') {
+                    element.checked = formData[key];
+                } else {
+                    element.value = formData[key];
+                }
+            }
+        });
+        
+        console.log(`Restored form data for ${tabName}`);
+        
+    } catch (error) {
+        console.error('Error restoring form data:', error);
+    }
+}
+
+/**
  * Setup event listeners for UI interactions
  */
 function setupEventListeners() {
@@ -46,10 +257,15 @@ function setupEventListeners() {
         tab.addEventListener('click', () => {
             const tabName = tab.dataset.tab;
             if (tabName) {
+                // Save current form data before switching tabs
+                saveCurrentFormData();
                 switchTab(tabName, tab);
             }
         });
     });
+    
+    // Add global auto-save listeners
+    setupAutoSaveListeners();
 
     // Search functionality
     const searchBar = document.getElementById('search-bar');
@@ -170,6 +386,11 @@ function switchTab(tabName, tabElement) {
             console.log('Unknown tab:', tabName);
             showPlaceholder('Unknown Tab', 'Content not implemented yet');
     }
+    
+    // Restore form data for this tab after content is loaded
+    setTimeout(() => {
+        restoreFormData(tabName);
+    }, 100);
 }
 
 /**
@@ -3865,6 +4086,7 @@ function clearIntakeForm() {
     document.getElementById('patient-intake-form').reset();
     document.getElementById('age').value = '';
     localStorage.removeItem('intakeDraft');
+    localStorage.removeItem('formData_patient-intake');
     showNotification('Form cleared successfully', 'info');
 }
 
