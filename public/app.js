@@ -1730,6 +1730,10 @@ function generateSubtasks(task, patientId, taskIndex) {
                                     ${subSubtask.complete ? 'checked' : ''}
                                     onchange="toggleSubSubtask('${patientId}', ${taskIndex}, ${subIndex}, ${subSubIndex})">
                                 <label for="sub-subtask-${patientId}-${taskIndex}-${subIndex}-${subSubIndex}">${subSubtask.name}</label>
+                                ${subSubtask.name === 'Completed by Patient' && subtask.name === 'Written Request' ? 
+                                    `<button class="download-completed-btn" onclick="downloadCompletedForm('${patientId}')" title="Download completed form">
+                                        📄 Download
+                                    </button>` : ''}
                             </li>
                         `;
                     }
@@ -4347,5 +4351,69 @@ function downloadForm(formType) {
         .catch(error => {
             console.error('Error checking PDF:', error);
             showNotification(`Error downloading ${formName}. Please try again.`, 'error');
+        });
+} 
+
+function downloadCompletedForm(patientId) {
+    // This function downloads the completed form for a specific patient
+    const patients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+    const patient = patients[patientId];
+    
+    if (!patient) {
+        showNotification('Patient not found', 'error');
+        return;
+    }
+    
+    const patientName = patient['Patient Name'] || patient.patientName || 'Unknown Patient';
+    const doseLevel = patient.doseLevel || 'regular';
+    
+    // Determine which form to download based on dose level
+    let formType;
+    let formName;
+    
+    if (doseLevel === 'high') {
+        formType = 'gaja-high-dose';
+        formName = 'Gaja - High Dose';
+    } else {
+        formType = 'gaja-regular-dose';
+        formName = 'Gaja - Regular Dose';
+    }
+    
+    const pdfFileName = `${formType}.pdf`;
+    const pdfPath = `/forms/${pdfFileName}`;
+    
+    // Check if the PDF file exists
+    fetch(pdfPath, { method: 'HEAD' })
+        .then(response => {
+            if (response.ok) {
+                // PDF exists, download it
+                const link = document.createElement('a');
+                link.href = pdfPath;
+                link.download = `${patientName}-${formName}.pdf`;
+                link.style.display = 'none';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showNotification(`${formName} downloaded for ${patientName}!`, 'success');
+            } else {
+                // PDF doesn't exist, show placeholder message
+                showNotification(`${formName} PDF not found. Please add the PDF file to the forms folder.`, 'warning');
+                
+                // Create a temporary download link with instructions
+                const link = document.createElement('a');
+                link.href = `data:text/plain;charset=utf-8,${encodeURIComponent(`${patientName} - ${formName}\n\nPDF file not found: ${pdfFileName}\n\nTo add this PDF:\n1. Place ${pdfFileName} in the 'forms' folder\n2. Restart the server\n3. Try downloading again`)}`;
+                link.download = `${patientName}-${formName}-instructions.txt`;
+                link.style.display = 'none';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking PDF:', error);
+            showNotification(`Error downloading ${formName} for ${patientName}. Please try again.`, 'error');
         });
 } 
