@@ -4314,8 +4314,18 @@ function downloadForm(formType) {
         'unknown-cp-high-dose': 'Unknown CP - High Dose'
     };
     
+    // Map to your actual PDF file names
+    const pdfFileNames = {
+        'gaja-regular-dose': 'Gaja - Reguler Dose.pdf',
+        'gaja-high-dose': 'Gaja - High Dose .pdf',
+        'von-gunten-regular-dose': 'Von Gunten - Reguler Dose .pdf',
+        'von-gunten-high-dose': 'Von Gunten - High Dose .pdf',
+        'unknown-cp-regular-dose': 'Unknown CP - Regular Dose .pdf',
+        'unknown-cp-high-dose': 'Unknown CP - High Dose .pdf'
+    };
+    
     const formName = formNames[formType] || 'Form';
-    const pdfFileName = `${formType}.pdf`;
+    const pdfFileName = pdfFileNames[formType] || `${formType}.pdf`;
     const pdfPath = `/forms/${pdfFileName}`;
     
     // Check if the PDF file exists
@@ -4367,19 +4377,18 @@ function downloadCompletedForm(patientId) {
     const patientName = patient['Patient Name'] || patient.patientName || 'Unknown Patient';
     const doseLevel = patient.doseLevel || 'regular';
     
-    // Determine which form to download based on dose level
-    let formType;
+    // Map to your actual PDF file names
+    let pdfFileName;
     let formName;
     
     if (doseLevel === 'high') {
-        formType = 'gaja-high-dose';
+        pdfFileName = 'Gaja - High Dose .pdf';
         formName = 'Gaja - High Dose';
     } else {
-        formType = 'gaja-regular-dose';
+        pdfFileName = 'Gaja - Reguler Dose.pdf';
         formName = 'Gaja - Regular Dose';
     }
     
-    const pdfFileName = `${formType}.pdf`;
     const pdfPath = `/forms/${pdfFileName}`;
     
     // Check if the PDF file exists
