@@ -163,6 +163,9 @@ function switchTab(tabName, tabElement) {
         case 'timelines':
             loadPatientTimelines();
             break;
+        case 'archived':
+            loadArchivedPatients();
+            break;
         default:
             console.log('Unknown tab:', tabName);
             showPlaceholder('Unknown Tab', 'Content not implemented yet');
@@ -1425,6 +1428,9 @@ async function loadPatientTimelines() {
                 window.taskCompletionData[patientId] = initializePatientTasks();
             }
             
+            const progress = calculateProgress(patientId);
+            const isComplete = progress === 100;
+            
             html += `
                 <div class="patient-timeline-card" id="${patientId}">
                     <div class="patient-header" onclick="toggleTimelineCard('${patientId}')">
@@ -1434,13 +1440,16 @@ async function loadPatientTimelines() {
                                 <span class="patient-details">Age: ${patient['Age'] || 'N/A'} | City: ${patient['City'] || patient.city || 'N/A'} | Hospice: ${patient['Hospice'] || 'N/A'}</span>
                             </div>
                             <div class="patient-progress">
-                                <span class="progress-text">${calculateProgress(patientId)}% Complete</span>
+                                <span class="progress-text">${progress}% Complete</span>
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: ${calculateProgress(patientId)}%"></div>
+                                    <div class="progress-fill" style="width: ${progress}%"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="collapse-indicator">▼</div>
+                        <div class="patient-actions">
+                            ${isComplete ? `<button class="archive-btn" onclick="event.stopPropagation(); archivePatient(${index})" title="Archive completed patient">📦 Archive</button>` : ''}
+                            <div class="collapse-indicator">▼</div>
+                        </div>
                     </div>
                     <div class="timeline-tasks">
                         ${generateImprovedTimelineSteps(patient, index)}
@@ -1541,6 +1550,184 @@ function exportPatientData() {
     } catch (error) {
         console.error('Export error:', error);
         showNotification('Failed to export data. Please try again.', 'error');
+    }
+}
+
+// Archive a completed patient
+function archivePatient(patientIndex) {
+    try {
+        const patients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        const archivedPatients = JSON.parse(localStorage.getItem('archivedPatients') || '[]');
+        
+        if (patientIndex >= 0 && patientIndex < patients.length) {
+            const patient = patients[patientIndex];
+            const archivedDate = new Date().toLocaleDateString();
+            
+            // Add archive date to patient data
+            patient.archivedDate = archivedDate;
+            patient.archivedBy = 'System'; // Could be enhanced to track user
+            
+            // Move to archived
+            archivedPatients.push(patient);
+            patients.splice(patientIndex, 1);
+            
+            // Save both arrays
+            localStorage.setItem('activePatients', JSON.stringify(patients));
+            localStorage.setItem('archivedPatients', JSON.stringify(archivedPatients));
+            
+            // Remove task completion data for this patient
+            const patientId = `patient-${patientIndex}`;
+            if (window.taskCompletionData && window.taskCompletionData[patientId]) {
+                delete window.taskCompletionData[patientId];
+            }
+            
+            showNotification(`Patient ${patient['Patient Name'] || 'Unknown'} archived successfully!`, 'success');
+            
+            // Reload the timeline to reflect changes
+            setTimeout(() => {
+                loadPatientTimelines();
+            }, 1000);
+            
+        } else {
+            showNotification('Invalid patient index', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Archive error:', error);
+        showNotification('Failed to archive patient. Please try again.', 'error');
+    }
+}
+
+// Load archived patients
+function loadArchivedPatients() {
+    try {
+        const content = document.getElementById('content');
+        const archivedPatients = JSON.parse(localStorage.getItem('archivedPatients') || '[]');
+        
+        if (archivedPatients.length === 0) {
+            content.innerHTML = `
+                <h1>📦 Archived Patients</h1>
+                <div class="empty-state">
+                    <p>No archived patients found.</p>
+                    <p>Completed patients will appear here when archived.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <h1>📦 Archived Patients</h1>
+            <div class="archived-stats">
+                <div class="stat-item">
+                    <span class="stat-number">${archivedPatients.length}</span>
+                    <span class="stat-label">Archived Patients</span>
+                </div>
+            </div>
+            <div class="archived-patients-container">
+        `;
+        
+        archivedPatients.forEach((patient, index) => {
+            const patientName = patient['Patient Name'] || 'Unknown';
+            const archivedDate = patient.archivedDate || 'Unknown';
+            
+            html += `
+                <div class="archived-patient-card">
+                    <div class="archived-patient-info">
+                        <h3>${patientName}</h3>
+                        <div class="archived-details">
+                            <span>Age: ${patient['Age'] || 'N/A'}</span>
+                            <span>City: ${patient['City'] || patient.city || 'N/A'}</span>
+                            <span>Hospice: ${patient['Hospice'] || 'N/A'}</span>
+                        </div>
+                        <div class="archived-meta">
+                            <span class="archived-date">Archived: ${archivedDate}</span>
+                            <span class="dose-level">Dose: ${patient.doseLevel || 'Regular'}</span>
+                        </div>
+                    </div>
+                    <div class="archived-actions">
+                        <button class="restore-btn" onclick="restorePatient(${index})" title="Restore to active patients">↩️ Restore</button>
+                        <button class="delete-btn" onclick="deleteArchivedPatient(${index})" title="Permanently delete">🗑️ Delete</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        content.innerHTML = html;
+        
+        setStatus('Archived patients loaded', 'success');
+        
+    } catch (error) {
+        console.error('Error loading archived patients:', error);
+        showNotification('Failed to load archived patients', 'error');
+    }
+}
+
+// Restore a patient from archive
+function restorePatient(archivedIndex) {
+    try {
+        const archivedPatients = JSON.parse(localStorage.getItem('archivedPatients') || '[]');
+        const activePatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        
+        if (archivedIndex >= 0 && archivedIndex < archivedPatients.length) {
+            const patient = archivedPatients[archivedIndex];
+            
+            // Remove archive metadata
+            delete patient.archivedDate;
+            delete patient.archivedBy;
+            
+            // Move back to active
+            activePatients.push(patient);
+            archivedPatients.splice(archivedIndex, 1);
+            
+            // Save both arrays
+            localStorage.setItem('activePatients', JSON.stringify(activePatients));
+            localStorage.setItem('archivedPatients', JSON.stringify(archivedPatients));
+            
+            showNotification(`Patient ${patient['Patient Name'] || 'Unknown'} restored to active patients!`, 'success');
+            
+            // Reload archived patients
+            setTimeout(() => {
+                loadArchivedPatients();
+            }, 1000);
+            
+        } else {
+            showNotification('Invalid patient index', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Restore error:', error);
+        showNotification('Failed to restore patient. Please try again.', 'error');
+    }
+}
+
+// Delete an archived patient permanently
+function deleteArchivedPatient(archivedIndex) {
+    if (confirm('Are you sure you want to permanently delete this patient? This action cannot be undone.')) {
+        try {
+            const archivedPatients = JSON.parse(localStorage.getItem('archivedPatients') || '[]');
+            
+            if (archivedIndex >= 0 && archivedIndex < archivedPatients.length) {
+                const patient = archivedPatients[archivedIndex];
+                archivedPatients.splice(archivedIndex, 1);
+                
+                localStorage.setItem('archivedPatients', JSON.stringify(archivedPatients));
+                
+                showNotification(`Patient ${patient['Patient Name'] || 'Unknown'} permanently deleted!`, 'success');
+                
+                // Reload archived patients
+                setTimeout(() => {
+                    loadArchivedPatients();
+                }, 1000);
+                
+            } else {
+                showNotification('Invalid patient index', 'error');
+            }
+            
+        } catch (error) {
+            console.error('Delete error:', error);
+            showNotification('Failed to delete patient. Please try again.', 'error');
+        }
     }
 }
 
