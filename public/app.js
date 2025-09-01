@@ -1385,7 +1385,7 @@ async function loadPatientTimelines() {
             '    <div class="legend-items">' +
             '      <div class="legend-item"><span class="bullet-demo not-started">1</span> Not Started (Orange)</div>' +
             '      <div class="legend-item"><span class="bullet-demo partial">2</span> Partially Complete (Yellow)</div>' +
-            '      <div class="legend-item"><span class="bullet-demo complete">3</span> Fully Complete (Green)</div>' +
+            '      <div class="legend-item"><span class="legend-item"><span class="bullet-demo complete">3</span> Fully Complete (Green)</div>' +
             '    </div>' +
             '  </div>' +
             '  <div class="timeline-controls">' +
@@ -1393,42 +1393,25 @@ async function loadPatientTimelines() {
             '    <button onclick="collapseAllTimelines()">Collapse All</button>' +
             '    <button onclick="filterTimelines(\'incomplete\')">Show Incomplete</button>' +
             '    <button onclick="filterTimelines(\'all\')">Show All</button>' +
+            '    <button onclick="exportPatientData()" class="export-btn">📊 Export to Excel</button>' +
             '  </div>' +
             '</div>' +
-            '<div class="search-filter-section">' +
-            '  <div class="search-section">' +
-            '    <input type="text" id="patient-search" placeholder="Search patients by name..." class="search-input">' +
-            '    <button onclick="clearSearch()" class="clear-search-btn">Clear</button>' +
-            '  </div>' +
-            '  <div class="filter-section">' +
-            '    <select id="status-filter" class="status-filter" onchange="filterPatients()">' +
-            '      <option value="all">All Patients</option>' +
-            '      <option value="incomplete">Incomplete Only</option>' +
-            '      <option value="complete">Complete Only</option>' +
-            '    </select>' +
-            '    <select id="dose-filter" class="dose-filter" onchange="filterPatients()">' +
-            '      <option value="all">All Dose Levels</option>' +
-            '      <option value="high">High Dose Only</option>' +
-            '      <option value="regular">Regular Dose Only</option>' +
-            '    </select>' +
-            '  </div>' +
+            '<div class="simple-search-bar">' +
+            '  <input type="text" id="patient-search" placeholder="🔍 Search patients by name..." class="simple-search-input">' +
+            '  <button onclick="clearSearch()" class="simple-clear-btn">Clear</button>' +
             '</div>' +
-            '<div class="status-dashboard">' +
-            '  <div class="status-card total">' +
-            '    <div class="status-number">${data.length}</div>' +
-            '    <div class="status-label">Total Patients</div>' +
+            '<div class="simple-stats">' +
+            '  <div class="stat-item">' +
+            '    <span class="stat-number">${data.length}</span>' +
+            '    <span class="stat-label">Total Patients</span>' +
             '  </div>' +
-            '  <div class="status-card incomplete">' +
-            '    <div class="status-number">${data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) < 100).length}</div>' +
-            '    <div class="status-label">Incomplete</div>' +
+            '  <div class="stat-item">' +
+            '    <span class="stat-number">${data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) < 100).length}</span>' +
+            '    <span class="stat-label">Incomplete</span>' +
             '  </div>' +
-            '  <div class="status-card complete">' +
-            '    <div class="status-number">${data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) === 100).length}</div>' +
-            '    <div class="status-label">Complete</div>' +
-            '  </div>' +
-            '  <div class="status-card high-dose">' +
-            '    <div class="status-number">${data.filter(p => p.doseLevel === "high").length}</div>' +
-            '    <div class="status-label">High Dose</div>' +
+            '  <div class="stat-item">' +
+            '    <span class="stat-number">${data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) === 100).length}</span>' +
+            '    <span class="stat-label">Complete</span>' +
             '  </div>' +
             '</div>' +
             '<div class="timelines-container">';
@@ -1481,33 +1464,15 @@ async function loadPatientTimelines() {
     }
 }
 
-// Filter patients based on search and filter criteria
+// Simple search functionality
 function filterPatients() {
     const searchTerm = document.getElementById('patient-search')?.value.toLowerCase() || '';
-    const statusFilter = document.getElementById('status-filter')?.value || 'all';
-    const doseFilter = document.getElementById('dose-filter')?.value || 'all';
-    
     const patientCards = document.querySelectorAll('.patient-timeline-card');
     
     patientCards.forEach(card => {
         const patientName = card.querySelector('.patient-info h3')?.textContent.toLowerCase() || '';
-        const progressText = card.querySelector('.progress-text')?.textContent || '';
-        const progress = parseInt(progressText) || 0;
         
-        // Check if patient matches search term
-        const matchesSearch = patientName.includes(searchTerm);
-        
-        // Check if patient matches status filter
-        let matchesStatus = true;
-        if (statusFilter === 'incomplete' && progress === 100) matchesStatus = false;
-        if (statusFilter === 'complete' && progress < 100) matchesStatus = false;
-        
-        // Check if patient matches dose filter (this would need to be implemented based on your data structure)
-        let matchesDose = true;
-        // TODO: Implement dose filtering based on patient data
-        
-        // Show/hide patient card based on filters
-        if (matchesSearch && matchesStatus && matchesDose) {
+        if (patientName.includes(searchTerm)) {
             card.style.display = 'block';
         } else {
             card.style.display = 'none';
@@ -1515,17 +1480,68 @@ function filterPatients() {
     });
 }
 
-// Clear search and reset filters
+// Clear search
 function clearSearch() {
     const searchInput = document.getElementById('patient-search');
-    const statusFilter = document.getElementById('status-filter');
-    const doseFilter = document.getElementById('dose-filter');
-    
-    if (searchInput) searchInput.value = '';
-    if (statusFilter) statusFilter.value = 'all';
-    if (doseFilter) doseFilter.value = 'all';
-    
-    filterPatients();
+    if (searchInput) {
+        searchInput.value = '';
+        filterPatients();
+    }
+}
+
+// Export patient data to Excel
+function exportPatientData() {
+    try {
+        const patients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        
+        if (patients.length === 0) {
+            showNotification('No patient data to export', 'warning');
+            return;
+        }
+        
+        // Create export data structure
+        const exportData = patients.map((patient, index) => {
+            const patientId = `patient-${index}`;
+            const progress = calculateProgress(patientId);
+            
+            return {
+                'Patient Name': patient['Patient Name'] || patient.patientName || 'Unknown',
+                'Age': patient['Age'] || patient.age || 'N/A',
+                'City': patient['City'] || patient.city || patient['Area'] || 'N/A',
+                'Hospice': patient['Hospice'] || patient.hospice || 'N/A',
+                'Phone Number': patient['Phone Number'] || patient.phone || 'N/A',
+                'Email': patient['Email'] || patient.email || 'N/A',
+                'Progress': `${progress}%`,
+                'Status': progress === 100 ? 'Complete' : progress > 0 ? 'Partial' : 'Not Started',
+                'Dose Level': patient.doseLevel || 'Regular',
+                'Last Updated': new Date().toLocaleDateString()
+            };
+        });
+        
+        // Convert to CSV
+        const headers = Object.keys(exportData[0]);
+        const csvContent = [
+            headers.join(','),
+            ...exportData.map(row => headers.map(header => `"${row[header]}"`).join(','))
+        ].join('\n');
+        
+        // Create download link
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `patient-data-${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification('Patient data exported successfully!', 'success');
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        showNotification('Failed to export data. Please try again.', 'error');
+    }
 }
 
 // Initialize patient tasks with subtasks and sub-subtasks
