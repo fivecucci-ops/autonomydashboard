@@ -475,8 +475,8 @@ async function loadActivePatients() {
         
         // Also try to fetch data from server
         try {
-            const response = await fetch('/api/read-active?spreadsheetId=local');
-            
+        const response = await fetch('/api/read-active?spreadsheetId=local');
+        
             if (response.ok) {
                 const serverData = await response.json();
                 
@@ -1435,15 +1435,15 @@ async function loadPatientTimelines() {
                 <div class="patient-timeline-card" id="${patientId}">
                     <div class="patient-header" onclick="toggleTimelineCard('${patientId}')">
                         <div>
-                            <div class="patient-info">
-                                <h3>${patientName}</h3>
+                        <div class="patient-info">
+                            <h3>${patientName}</h3>
                                 <span class="patient-details">Age: ${patient['Age'] || 'N/A'} | City: ${patient['City'] || patient.city || 'N/A'} | Hospice: ${patient['Hospice'] || 'N/A'}</span>
-                            </div>
-                            <div class="patient-progress">
+                        </div>
+                        <div class="patient-progress">
                                 <span class="progress-text">${progress}% Complete</span>
-                                <div class="progress-bar">
+                            <div class="progress-bar">
                                     <div class="progress-fill" style="width: ${progress}%"></div>
-                                </div>
+                            </div>
                             </div>
                         </div>
                         <div class="patient-actions">
@@ -1467,9 +1467,6 @@ async function loadPatientTimelines() {
         }
         
         setStatus('Timelines loaded', 'success');
-        
-        // Mark all tasks complete for Adam Jones
-        markAllTasksComplete('Adam Jones');
     } catch (error) {
         console.error('Error loading timelines:', error);
         showError(`Failed to load timelines: ${error.message}`);
@@ -1965,16 +1962,16 @@ function generateImprovedTimelineSteps(patient, index) {
             // Standard logic for other tasks
             completedSubtasks = task.subtasks.filter(s => s.complete).length;
             totalSubtasks = task.subtasks.length;
-            
-            if (completedSubtasks === 0) {
-                statusClass = 'not-started';
-                statusText = 'Not Started';
-            } else if (completedSubtasks === totalSubtasks) {
-                statusClass = 'complete';
-                statusText = 'Complete';
-            } else {
-                statusClass = 'partial';
-                statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+        
+        if (completedSubtasks === 0) {
+            statusClass = 'not-started';
+            statusText = 'Not Started';
+        } else if (completedSubtasks === totalSubtasks) {
+            statusClass = 'complete';
+            statusText = 'Complete';
+        } else {
+            statusClass = 'partial';
+            statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
             }
         }
         
@@ -2007,16 +2004,16 @@ function generateSubtasks(task, patientId, taskIndex) {
     
     // Special handling for Quickbooks Invoice task to add "or" between payment options
     if (task.id === 'invoice') {
-        task.subtasks.forEach((subtask, subIndex) => {
-            html += `
-                <li class="subtask-item">
-                    <input type="checkbox" 
-                        id="subtask-${patientId}-${taskIndex}-${subIndex}"
-                        ${subtask.complete ? 'checked' : ''}
+    task.subtasks.forEach((subtask, subIndex) => {
+        html += `
+            <li class="subtask-item">
+                <input type="checkbox" 
+                    id="subtask-${patientId}-${taskIndex}-${subIndex}"
+                    ${subtask.complete ? 'checked' : ''}
                         onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex})">
-                    <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
-                </li>
-            `;
+                <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
+            </li>
+        `;
             
             // Add sub-subtasks if they exist (like payment options under "Payment Received")
             if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
