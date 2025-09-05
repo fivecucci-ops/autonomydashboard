@@ -290,13 +290,14 @@ function switchToActiveData() {
     }
 }
 
+
 /**
- * Switch to Closed Cases tab from dashboard
+ * Switch to Archived Patients tab from dashboard
  */
-function switchToClosedCases() {
-    const closedCasesTab = document.querySelector('[data-tab="closed"]');
-    if (closedCasesTab) {
-        switchTab('closed', closedCasesTab);
+function switchToArchived() {
+    const archivedTab = document.querySelector('[data-tab="archived"]');
+    if (archivedTab) {
+        switchTab('archived', archivedTab);
     }
 }
 
@@ -339,9 +340,6 @@ function switchTab(tabName, tabElement) {
             break;
         case 'calendar':
             loadCalendar();
-            break;
-        case 'closed':
-            showPlaceholder('Closed Cases', 'This will show completed patient cases');
             break;
         case 'outstanding':
             showPlaceholder('Outstanding Cases', 'This will show pending/outstanding items');
@@ -580,32 +578,36 @@ function getStatusClass(status) {
 
 // View toggles for Active Data
 function switchToTableView() {
-    const patients = currentData.active || [];
+    // Get patients from localStorage (same source as loadActivePatients)
+    const localPatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
     const content = document.getElementById('content');
     content.innerHTML = `
         <div class="active-header">
-            <h1>Active Patients (${patients.length})</h1>
+            <h1>Active Patients (${localPatients.length})</h1>
             <div class="active-view-toggle">
                 <button class="btn-primary" onclick="switchToTableView()">Table</button>
                 <button class="btn-secondary" onclick="switchToCardView()">Cards</button>
+                <button class="btn-secondary" onclick="switchToSectionView()">Sections</button>
             </div>
         </div>
-        ${patients.length > 0 ? generatePatientTable(patients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+        ${localPatients.length > 0 ? generatePatientTable(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
     `;
 }
 
 function switchToCardView() {
-    const patients = currentData.active || [];
+    // Get patients from localStorage (same source as loadActivePatients)
+    const localPatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
     const content = document.getElementById('content');
     content.innerHTML = `
         <div class="active-header">
-            <h1>Active Patients (${patients.length})</h1>
+            <h1>Active Patients (${localPatients.length})</h1>
             <div class="active-view-toggle">
                 <button class="btn-secondary" onclick="switchToTableView()">Table</button>
                 <button class="btn-primary" onclick="switchToCardView()">Cards</button>
+                <button class="btn-secondary" onclick="switchToSectionView()">Sections</button>
             </div>
         </div>
-        ${patients.length > 0 ? generateActivePatientCards(patients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+        ${localPatients.length > 0 ? generateActivePatientCards(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
     `;
 }
 
@@ -671,10 +673,10 @@ async function loadDashboard() {
                     <div class="number">${paidCount}</div>
                     <p>Out of ${data.length} total</p>
                 </div>
-                <div class="card clickable-card" onclick="switchToClosedCases()">
-                    <h3>Completed Cases</h3>
+                <div class="card clickable-card" onclick="switchToArchived()">
+                    <h3>Archived Patients</h3>
                     <div class="number">${completedCount}</div>
-                    <p>CP completed</p>
+                    <p>Completed cases</p>
                     <div class="card-hint">Click to view →</div>
                 </div>
             </div>
