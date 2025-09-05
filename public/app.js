@@ -755,6 +755,20 @@ async function loadActivePatients() {
         // First, try to get data from localStorage (includes newly added patients)
         let localPatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
         
+        // Ensure all local patients have unique IDs
+        let needsUpdate = false;
+        localPatients.forEach(patient => {
+            if (!patient.id) {
+                patient.id = 'PAT-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                needsUpdate = true;
+            }
+        });
+        
+        // Save updated patients back to localStorage if IDs were added
+        if (needsUpdate) {
+            localStorage.setItem('activePatients', JSON.stringify(localPatients));
+        }
+        
         // Also try to fetch data from server
         try {
         const response = await fetch('/api/read-active?spreadsheetId=local');
@@ -768,6 +782,10 @@ async function loadActivePatients() {
                     serverData.forEach(patient => {
                         const name = patient['Patient Name'] || patient.patientName;
                         if (!patientNames.has(name)) {
+                            // Ensure server data patients have unique IDs
+                            if (!patient.id) {
+                                patient.id = 'PAT-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                            }
                             localPatients.push(patient);
                         }
                     });
@@ -1704,7 +1722,8 @@ async function loadPatientTimelines() {
         
         data.forEach((patient, index) => {
             const patientName = patient['Patient Name'] || 'Unknown';
-            const patientId = `patient-${index}`;
+            // Use the patient's actual ID if it exists, otherwise generate one
+            const patientId = patient.id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`;
             
             // Initialize patient tasks if not exists
             if (!window.taskCompletionData[patientId]) {
@@ -1793,7 +1812,7 @@ function exportPatientData() {
         
         // Create export data structure
         const exportData = patients.map((patient, index) => {
-            const patientId = `patient-${index}`;
+            const patientId = patient.id || `patient-${patient['Patient Name']?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}-${Date.now()}`;
             const progress = calculateProgress(patientId);
             
             return {
@@ -1859,7 +1878,7 @@ function archivePatient(patientIndex) {
             localStorage.setItem('archivedPatients', JSON.stringify(archivedPatients));
             
             // Remove task completion data for this patient
-            const patientId = `patient-${patientIndex}`;
+            const patientId = patients[patientIndex].id || `patient-${patients[patientIndex]['Patient Name']?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}-${Date.now()}`;
             if (window.taskCompletionData && window.taskCompletionData[patientId]) {
                 delete window.taskCompletionData[patientId];
             }
@@ -2213,7 +2232,7 @@ function markAllTasksComplete(patientName) {
             return;
         }
         
-        const patientId = `patient-${patientIndex}`;
+        const patientId = patients[patientIndex].id || `patient-${patients[patientIndex]['Patient Name']?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}-${Date.now()}`;
         
         // Initialize task completion data if not exists
         if (!window.taskCompletionData[patientId]) {
@@ -2395,7 +2414,7 @@ function initializePatientTasks() {
 
 // Helper to generate improved timeline steps
 function generateImprovedTimelineSteps(patient, index) {
-    const patientId = `patient-${index}`;
+    const patientId = patient.id || `patient-${patient['Patient Name']?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}-${Date.now()}`;
     const tasks = window.taskCompletionData[patientId] || initializePatientTasks();
     
     
