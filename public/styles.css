@@ -2378,15 +2378,15 @@ body.dark-mode {
 }
 
 .bullet-demo.not-started {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: #ff7733;
 }
 
 .bullet-demo.partial {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    background: #ffc107;
 }
 
 .bullet-demo.complete {
-    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    background: #28a745;
 }
 
 .timeline-controls {
@@ -2476,17 +2476,6 @@ body.dark-mode {
     font-size: 14px;
 }
 
-.bullet-demo.not-started {
-    background: #ff7733;
-}
-
-.bullet-demo.partial {
-    background: #ffc107;
-}
-
-.bullet-demo.complete {
-    background: #28a745;
-}
 
 .timeline-controls {
     display: flex;
@@ -3163,17 +3152,6 @@ body.dark-mode {
     transition: all 0.3s;
 }
 
-.task-number.not-started {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.task-number.partial {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-}
-
-.task-number.complete {
-    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-}
 
 .task-info {
     flex: 1;

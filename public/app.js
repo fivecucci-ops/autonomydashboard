@@ -2839,6 +2839,8 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     taskNumber.classList.add(statusClass);
     taskStatus.textContent = statusText;
     
+    console.log(`Updated task ${taskIndex} status to: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
+    
     // Update overall progress
     const progressText = document.querySelector(`#${patientId} .progress-text`);
     const progressFill = document.querySelector(`#${patientId} .progress-fill`);
@@ -2938,6 +2940,8 @@ function toggleSubSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
     taskItem.classList.add(statusClass);
     taskNumber.classList.add(statusClass);
     taskStatus.textContent = statusText;
+    
+    console.log(`Updated task ${taskIndex} status to: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
     
     // Update overall progress
     const progressText = document.querySelector(`#${patientId} .progress-text`);
@@ -3040,6 +3044,8 @@ function updateSubSubtaskInput(patientId, taskIndex, subtaskIndex, subSubtaskInd
     taskItem.classList.add(statusClass);
     taskNumber.classList.add(statusClass);
     taskStatus.textContent = statusText;
+    
+    console.log(`Updated task ${taskIndex} status to: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
     
     // Update overall progress
     const progressText = document.querySelector(`#${patientId} .progress-text`);
