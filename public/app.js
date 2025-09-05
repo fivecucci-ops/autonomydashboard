@@ -302,6 +302,52 @@ function switchToArchived() {
 }
 
 /**
+ * Auto-archive patient when they reach 100% completion
+ */
+function autoArchivePatient(patientId) {
+    try {
+        const patients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        const archivedPatients = JSON.parse(localStorage.getItem('archivedPatients') || '[]');
+        
+        // Find the patient in active patients
+        const patientIndex = patients.findIndex(p => p.id === patientId);
+        if (patientIndex === -1) return; // Patient not found in active list
+        
+        const patient = patients[patientIndex];
+        const archivedDate = new Date().toLocaleDateString();
+        
+        // Add archive metadata
+        patient.archivedDate = archivedDate;
+        patient.archivedBy = 'Auto-Archive (100% Complete)';
+        patient.archivedReason = 'All tasks completed';
+        
+        // Move to archived
+        archivedPatients.push(patient);
+        patients.splice(patientIndex, 1);
+        
+        // Save both arrays
+        localStorage.setItem('activePatients', JSON.stringify(patients));
+        localStorage.setItem('archivedPatients', JSON.stringify(archivedPatients));
+        
+        // Show success message
+        setStatus(`Patient ${patient.name} has been automatically archived (100% complete)`, 'success');
+        
+        // Refresh the current view if we're on timelines or active-data
+        if (currentTab === 'timelines') {
+            loadPatientTimelines();
+        } else if (currentTab === 'active-data') {
+            loadActivePatients();
+        }
+        
+        console.log(`Auto-archived patient ${patient.name} (${patientId})`);
+        
+    } catch (error) {
+        console.error('Error auto-archiving patient:', error);
+        setStatus('Error auto-archiving patient', 'error');
+    }
+}
+
+/**
  * Switch between tabs
  */
 function switchTab(tabName, tabElement) {
@@ -2702,6 +2748,13 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     
     // Save to localStorage
     localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+    
+    // Auto-archive if 100% complete
+    if (progress === 100) {
+        setTimeout(() => {
+            autoArchivePatient(patientId);
+        }, 1000); // Small delay to show the 100% completion briefly
+    }
 }
 
 // Toggle sub-subtask completion status
@@ -2794,6 +2847,13 @@ function toggleSubSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
     
     // Save to localStorage
     localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+    
+    // Auto-archive if 100% complete
+    if (progress === 100) {
+        setTimeout(() => {
+            autoArchivePatient(patientId);
+        }, 1000); // Small delay to show the 100% completion briefly
+    }
 }
 
 // Update sub-subtask input value
@@ -2888,6 +2948,13 @@ function updateSubSubtaskInput(patientId, taskIndex, subtaskIndex, subSubtaskInd
     
     // Save to localStorage
     localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+    
+    // Auto-archive if 100% complete
+    if (progress === 100) {
+        setTimeout(() => {
+            autoArchivePatient(patientId);
+        }, 1000); // Small delay to show the 100% completion briefly
+    }
 }
 
 // Toggle individual timeline card
