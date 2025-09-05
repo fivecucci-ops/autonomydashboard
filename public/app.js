@@ -40,6 +40,39 @@ function initMainApp() {
 }
 
 /**
+ * Migrate task completion data from old index-based IDs to new unique IDs
+ */
+function migrateTaskCompletionData() {
+    try {
+        const activePatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
+        let needsUpdate = false;
+        
+        activePatients.forEach((patient, index) => {
+            const oldPatientId = `patient-${index}`;
+            const newPatientId = patient.id;
+            
+            if (window.taskCompletionData && window.taskCompletionData[oldPatientId] && newPatientId) {
+                if (!window.taskCompletionData[newPatientId]) {
+                    // Copy task data from old ID to new ID
+                    window.taskCompletionData[newPatientId] = window.taskCompletionData[oldPatientId];
+                    // Remove old ID data
+                    delete window.taskCompletionData[oldPatientId];
+                    needsUpdate = true;
+                    console.log(`Migrated task data for ${patient['Patient Name'] || 'Unknown'} from ${oldPatientId} to ${newPatientId}`);
+                }
+            }
+        });
+        
+        if (needsUpdate) {
+            localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+            console.log('Task completion data migration completed');
+        }
+    } catch (error) {
+        console.error('Error migrating task completion data:', error);
+    }
+}
+
+/**
  * Load all persisted data from localStorage
  */
 function loadPersistedData() {
@@ -52,6 +85,9 @@ function loadPersistedData() {
         } else {
             window.taskCompletionData = {};
         }
+        
+        // Migrate any old task completion data
+        migrateTaskCompletionData();
         
         // Load workflow data
         const savedWorkflowData = localStorage.getItem('workflowData');
@@ -757,16 +793,29 @@ async function loadActivePatients() {
         
         // Ensure all local patients have unique IDs
         let needsUpdate = false;
-        localPatients.forEach(patient => {
+        localPatients.forEach((patient, index) => {
             if (!patient.id) {
                 patient.id = 'PAT-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
                 needsUpdate = true;
             }
+            
+            // Migrate task completion data from old index-based IDs to new unique IDs
+            const oldPatientId = `patient-${index}`;
+            const newPatientId = patient.id;
+            
+            if (window.taskCompletionData && window.taskCompletionData[oldPatientId] && !window.taskCompletionData[newPatientId]) {
+                // Copy task data from old ID to new ID
+                window.taskCompletionData[newPatientId] = window.taskCompletionData[oldPatientId];
+                // Remove old ID data
+                delete window.taskCompletionData[oldPatientId];
+                needsUpdate = true;
+            }
         });
         
-        // Save updated patients back to localStorage if IDs were added
+        // Save updated patients and task data back to localStorage if changes were made
         if (needsUpdate) {
             localStorage.setItem('activePatients', JSON.stringify(localPatients));
+            localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
         }
         
         // Also try to fetch data from server
@@ -1724,6 +1773,17 @@ async function loadPatientTimelines() {
             const patientName = patient['Patient Name'] || 'Unknown';
             // Use the patient's actual ID if it exists, otherwise generate one
             const patientId = patient.id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`;
+            
+            // Migrate task completion data from old index-based IDs to new unique IDs
+            const oldPatientId = `patient-${index}`;
+            if (window.taskCompletionData && window.taskCompletionData[oldPatientId] && !window.taskCompletionData[patientId]) {
+                // Copy task data from old ID to new ID
+                window.taskCompletionData[patientId] = window.taskCompletionData[oldPatientId];
+                // Remove old ID data
+                delete window.taskCompletionData[oldPatientId];
+                // Save the migrated data
+                localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+            }
             
             // Initialize patient tasks if not exists
             if (!window.taskCompletionData[patientId]) {
