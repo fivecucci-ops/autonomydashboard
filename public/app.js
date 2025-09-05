@@ -1731,6 +1731,18 @@ async function loadPatientTimelines() {
             window.taskCompletionData = {};
         }
         
+        // Ensure task completion data is loaded from localStorage
+        const savedTaskData = localStorage.getItem('taskCompletionData');
+        if (savedTaskData) {
+            try {
+                const parsedData = JSON.parse(savedTaskData);
+                window.taskCompletionData = { ...window.taskCompletionData, ...parsedData };
+                console.log('Loaded task completion data from localStorage:', Object.keys(window.taskCompletionData).length, 'patients');
+            } catch (error) {
+                console.error('Error parsing task completion data from localStorage:', error);
+            }
+        }
+        
         const content = document.getElementById('content');
         let html = '<h1>Patient Timelines</h1>' +
             '<div class="timeline-header">' +
@@ -1760,11 +1772,19 @@ async function loadPatientTimelines() {
             '    <span class="stat-label">Total Patients</span>' +
             '  </div>' +
             '  <div class="stat-item">' +
-            '    <span class="stat-number">' + data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) < 100).length + '</span>' +
+            '    <span class="stat-number">' + data.filter((p, i) => {
+                const patientName = p['Patient Name'] || 'Unknown';
+                const patientId = p.id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${i}`;
+                return calculateProgress(patientId) < 100;
+            }).length + '</span>' +
             '    <span class="stat-label">Incomplete</span>' +
             '  </div>' +
             '  <div class="stat-item">' +
-            '    <span class="stat-number">' + data.filter(p => calculateProgress(`patient-${data.indexOf(p)}`) === 100).length + '</span>' +
+            '    <span class="stat-number">' + data.filter((p, i) => {
+                const patientName = p['Patient Name'] || 'Unknown';
+                const patientId = p.id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${i}`;
+                return calculateProgress(patientId) === 100;
+            }).length + '</span>' +
             '    <span class="stat-label">Complete</span>' +
             '  </div>' +
             '</div>' +
@@ -1772,8 +1792,8 @@ async function loadPatientTimelines() {
         
         data.forEach((patient, index) => {
             const patientName = patient['Patient Name'] || 'Unknown';
-            // Use the patient's actual ID if it exists, otherwise generate one
-            const patientId = patient.id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`;
+            // Use a stable ID based on patient name and index to ensure consistency across page refreshes
+            const patientId = patient.id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${index}`;
             
             // Migrate task completion data from old index-based IDs to new unique IDs
             const oldPatientId = `patient-${index}`;
@@ -2828,6 +2848,7 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     
     // Save to localStorage
     localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+    console.log('Task completion data saved to localStorage in toggleSubtask');
     
     // Auto-archive if 100% complete
     if (progress === 100) {
@@ -2927,6 +2948,7 @@ function toggleSubSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
     
     // Save to localStorage
     localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+    console.log('Task completion data saved to localStorage in toggleSubSubtask');
     
     // Auto-archive if 100% complete
     if (progress === 100) {
@@ -3028,6 +3050,7 @@ function updateSubSubtaskInput(patientId, taskIndex, subtaskIndex, subSubtaskInd
     
     // Save to localStorage
     localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+    console.log('Task completion data saved to localStorage in updateSubSubtaskInput');
     
     // Auto-archive if 100% complete
     if (progress === 100) {
