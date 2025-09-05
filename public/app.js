@@ -39,44 +39,6 @@ function initMainApp() {
     setStatus('Local Mode Active - Ready', 'success');
 }
 
-/**
- * Reset all task completion data for a specific patient
- */
-function resetPatientTasks(patientName) {
-    try {
-        const activePatients = JSON.parse(localStorage.getItem('activePatients') || '[]');
-        const patient = activePatients.find(p => 
-            (p['Patient Name'] === patientName) || 
-            (p.patientName === patientName)
-        );
-        
-        if (patient && patient.id) {
-            // Clear all task completion data for this patient
-            if (window.taskCompletionData && window.taskCompletionData[patient.id]) {
-                delete window.taskCompletionData[patient.id];
-                localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
-                console.log(`Reset all tasks for ${patientName}`);
-                
-                // Show success message
-                setStatus(`All tasks reset for ${patientName}`, 'success');
-                
-                // Refresh the current view if we're on timelines
-                if (currentTab === 'timelines') {
-                    loadPatientTimelines();
-                }
-            } else {
-                console.log(`No task data found for ${patientName}`);
-                setStatus(`No task data found for ${patientName}`, 'warning');
-            }
-        } else {
-            console.log(`Patient ${patientName} not found`);
-            setStatus(`Patient ${patientName} not found`, 'error');
-        }
-    } catch (error) {
-        console.error('Error resetting patient tasks:', error);
-        setStatus('Error resetting patient tasks', 'error');
-    }
-}
 
 /**
  * Migrate task completion data from old index-based IDs to new unique IDs
@@ -1848,7 +1810,6 @@ async function loadPatientTimelines() {
                             </div>
                         </div>
                         <div class="patient-actions">
-                            <button class="btn-sm reset-btn" onclick="event.stopPropagation(); resetPatientTasks('${patientName}')" title="Reset all tasks for this patient">🔄 Reset</button>
                             ${isComplete ? `<button class="archive-btn" onclick="event.stopPropagation(); archivePatient(${index})" title="Archive completed patient">📦 Archive</button>` : ''}
                             <div class="collapse-indicator">▼</div>
                         </div>
