@@ -557,6 +557,8 @@ function autoArchivePatient(patientId) {
             loadPatientTimelines();
         } else if (currentTab === 'active-data') {
             loadActivePatients();
+        } else if (currentTab === 'dashboard') {
+            loadDashboard();
         }
         
         console.log(`Auto-archived patient ${patient.name} (${patientId})`);
@@ -913,7 +915,10 @@ async function loadDashboard() {
         // Calculate metrics (same as simple-app.html)
         const avgAge = calculateAverageAge(data);
         const paidCount = countPaidInvoices(data);
-        const completedCount = countCompletedCases(data);
+        
+        // Get actual archived patients count from localStorage
+        const archivedPatients = JSON.parse(localStorage.getItem('archivedPatients') || '[]');
+        const archivedCount = archivedPatients.length;
         
         // Get 5 most recently added patients
         const recentPatients = getRecentPatients(data, 5);
@@ -941,7 +946,7 @@ async function loadDashboard() {
                 </div>
                 <div class="card clickable-card" onclick="switchToArchived()">
                     <h3>Archived Patients</h3>
-                    <div class="number">${completedCount}</div>
+                    <div class="number">${archivedCount}</div>
                     <p>Completed cases</p>
                     <div class="card-hint">Click to view →</div>
                 </div>

@@ -63,7 +63,10 @@
                 // Create dashboard cards
                 const avgAge = calculateAverageAge(data);
                 const paidCount = countPaidInvoices(data);
-                const completedCount = countCompletedCases(data);
+                
+                // Get actual archived patients count from localStorage
+                const archivedPatients = JSON.parse(localStorage.getItem('archivedPatients') || '[]');
+                const archivedCount = archivedPatients.length;
                 
                 cardsDiv.innerHTML = `
                     <div class="dashboard-cards">
@@ -83,9 +86,9 @@
                             <p>Out of ${data.length} total</p>
                         </div>
                         <div class="card">
-                            <h3>Completed Cases</h3>
-                            <div class="number">${completedCount}</div>
-                            <p>CP completed</p>
+                            <h3>Archived Patients</h3>
+                            <div class="number">${archivedCount}</div>
+                            <p>Completed cases</p>
                         </div>
                     </div>
                 `;
