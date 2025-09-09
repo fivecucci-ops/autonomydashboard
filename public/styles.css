@@ -3188,19 +3188,7 @@ body.dark-mode {
     background: rgba(103, 126, 234, 0.05);
 }
 
-.task-number {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: bold;
-    font-size: 18px;
-    margin-right: 15px;
-    transition: all 0.3s;
-}
+/* Removed duplicate task-number definition - using the one below with proper styling */
 
 
 .task-info {
@@ -3245,15 +3233,15 @@ body.dark-mode {
 
 /* Enhanced Task Item Styling for Timeline */
 .task-item.not-started {
-    border-left: 4px solid #ff7733;
+    border-left: 4px solid #ff7733 !important;
 }
 
 .task-item.partial {
-    border-left: 4px solid #ffd700;
+    border-left: 4px solid #ffd700 !important;
 }
 
 .task-item.complete {
-    border-left: 4px solid #28a745;
+    border-left: 4px solid #28a745 !important;
 }
 
 .task-number {
@@ -3267,19 +3255,22 @@ body.dark-mode {
     font-weight: bold;
     font-size: 14px;
     flex-shrink: 0;
+    background: #6c757d; /* Default gray background */
 }
 
 .task-number.not-started {
-    background: #ff7733;
+    background: #ff7733 !important;
+    color: white !important;
 }
 
 .task-number.partial {
-    background: #ffd700;
-    color: #333;
+    background: #ffd700 !important;
+    color: #333 !important;
 }
 
 .task-number.complete {
-    background: #28a745;
+    background: #28a745 !important;
+    color: white !important;
 }
 
 /* Subtask and Sub-subtask Styling */
@@ -4310,6 +4301,22 @@ body.dark-mode {
 
 .dark-mode .chat-message-content {
     color: #e2e8f0;
+}
+
+/* Refresh button styling */
+.refresh-btn {
+    background: #17a2b8;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.refresh-btn:hover {
+    background: #138496;
 } 
 
 /* Checklist Forms Styles */

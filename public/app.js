@@ -67,6 +67,99 @@ function showError(message, duration = 5000) {
 window.setStatus = setStatus;
 
 /**
+ * Force refresh all task status colors
+ */
+function refreshAllTaskStatuses() {
+    console.log('Refreshing all task status colors...');
+    
+    // Get all patient timeline cards
+    const patientCards = document.querySelectorAll('.patient-timeline-card');
+    
+    patientCards.forEach(card => {
+        const patientId = card.id;
+        const tasks = window.taskCompletionData[patientId];
+        
+        if (tasks) {
+            tasks.forEach((task, taskIndex) => {
+                // Recalculate status for each task
+                let completedSubtasks = 0;
+                let totalSubtasks = 0;
+                
+                if (task.id === 'invoice') {
+                    // Special logic for Quickbooks Invoice
+                    const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
+                    const paymentReceived = task.subtasks.find(s => s.name === 'Payment Received');
+                    const paidViaQuickbooks = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
+                    const paidViaCheck = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Check')?.complete || false;
+                    
+                    totalSubtasks = task.subtasks.length;
+                    
+                    if (sentInvoice && (paidViaQuickbooks || paidViaCheck)) {
+                        completedSubtasks = totalSubtasks;
+                    } else if (sentInvoice) {
+                        completedSubtasks = 1;
+                    } else {
+                        completedSubtasks = 0;
+                    }
+                } else {
+                    // Standard logic for other tasks
+                    task.subtasks.forEach(subtask => {
+                        totalSubtasks++;
+                        
+                        if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
+                            let allSubSubtasksComplete = true;
+                            subtask.subSubtasks.forEach(subSubtask => {
+                                if (!subSubtask.complete) {
+                                    allSubSubtasksComplete = false;
+                                }
+                            });
+                            if (allSubSubtasksComplete) {
+                                completedSubtasks++;
+                            }
+                        } else {
+                            if (subtask.complete) completedSubtasks++;
+                        }
+                    });
+                }
+                
+                // Update visual status
+                const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
+                if (taskItem) {
+                    const taskNumber = taskItem.querySelector('.task-number');
+                    const taskStatus = taskItem.querySelector('.task-status');
+                    
+                    // Remove old classes
+                    taskItem.classList.remove('not-started', 'partial', 'complete');
+                    taskNumber.classList.remove('not-started', 'partial', 'complete');
+                    
+                    // Determine new status
+                    let statusClass, statusText;
+                    if (completedSubtasks === 0) {
+                        statusClass = 'not-started';
+                        statusText = 'Not Started';
+                    } else if (completedSubtasks === totalSubtasks) {
+                        statusClass = 'complete';
+                        statusText = 'Complete';
+                    } else {
+                        statusClass = 'partial';
+                        statusText = 'Partially Complete';
+                    }
+                    
+                    // Apply new classes
+                    taskItem.classList.add(statusClass);
+                    taskNumber.classList.add(statusClass);
+                    taskStatus.textContent = statusText;
+                    
+                    console.log(`Refreshed task ${taskIndex} status: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
+                }
+            });
+        }
+    });
+    
+    console.log('Task status refresh complete');
+}
+
+/**
  * Cache management functions
  */
 function getCachedData(key) {
@@ -1849,6 +1942,7 @@ async function loadPatientTimelines() {
             '    <button onclick="collapseAllTimelines()">Collapse All</button>' +
             '    <button onclick="filterTimelines(\'incomplete\')">Show Incomplete</button>' +
             '    <button onclick="filterTimelines(\'all\')">Show All</button>' +
+            '    <button onclick="refreshAllTaskStatuses()" class="refresh-btn">🔄 Refresh Colors</button>' +
             '    <button onclick="exportPatientData()" class="export-btn">📊 Export to Excel</button>' +
             '  </div>' +
             '</div>' +
@@ -1938,6 +2032,11 @@ async function loadPatientTimelines() {
         if (searchInput) {
             searchInput.addEventListener('input', filterPatients);
         }
+        
+        // Force refresh all task status colors after a short delay
+        setTimeout(() => {
+            refreshAllTaskStatuses();
+        }, 100);
         
         setStatus('Timelines loaded', 'success');
     } catch (error) {
@@ -2620,18 +2719,20 @@ function generateImprovedTimelineSteps(patient, index) {
             // Standard logic for other tasks
             completedSubtasks = task.subtasks.filter(s => s.complete).length;
             totalSubtasks = task.subtasks.length;
-        
-        if (completedSubtasks === 0) {
-            statusClass = 'not-started';
-            statusText = 'Not Started';
-        } else if (completedSubtasks === totalSubtasks) {
-            statusClass = 'complete';
-            statusText = 'Complete';
-        } else {
-            statusClass = 'partial';
-            statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+            
+            if (completedSubtasks === 0) {
+                statusClass = 'not-started';
+                statusText = 'Not Started';
+            } else if (completedSubtasks === totalSubtasks) {
+                statusClass = 'complete';
+                statusText = 'Complete';
+            } else {
+                statusClass = 'partial';
+                statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
             }
         }
+        
+        console.log(`Initial task ${taskIndex} status: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
         
         html += `
             <div class="task-item ${statusClass}" data-task-index="${taskIndex}">
@@ -2930,6 +3031,8 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     taskStatus.textContent = statusText;
     
     console.log(`Updated task ${taskIndex} status to: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
+    console.log(`Task item classes:`, taskItem.className);
+    console.log(`Task number classes:`, taskNumber.className);
     
     // Update overall progress
     const progressText = document.querySelector(`#${patientId} .progress-text`);
@@ -3032,6 +3135,8 @@ function toggleSubSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
     taskStatus.textContent = statusText;
     
     console.log(`Updated task ${taskIndex} status to: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
+    console.log(`Task item classes:`, taskItem.className);
+    console.log(`Task number classes:`, taskNumber.className);
     
     // Update overall progress
     const progressText = document.querySelector(`#${patientId} .progress-text`);
@@ -3136,6 +3241,8 @@ function updateSubSubtaskInput(patientId, taskIndex, subtaskIndex, subSubtaskInd
     taskStatus.textContent = statusText;
     
     console.log(`Updated task ${taskIndex} status to: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
+    console.log(`Task item classes:`, taskItem.className);
+    console.log(`Task number classes:`, taskNumber.className);
     
     // Update overall progress
     const progressText = document.querySelector(`#${patientId} .progress-text`);
