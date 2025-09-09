@@ -27,7 +27,7 @@ components:
         Age:
           type: integer
           example: 84
-        Area:
+        City:
           type: string
           example: san diego
         FirstRequest:
@@ -268,13 +268,13 @@ This Excel file appears to be a sample dataset for a medical/hospice patient man
 
 Sheet 0: "Active" (Active Patients Tracking)
 Purpose: Tracks ongoing patient cases with detailed lifecycle info, from requests to ingestion, billing, and records.
-Headers (Row 1): ti (possibly typo/ID), Date, Patient Name, DOB, Age, Area, 1st request, 2nd request, CP Doctor, CP Completed, RXNT Info, WR, Hospice, Prescription Submit, (empty), invoice amount, PAID, Check list, Ingestion Date, Ingestion Location, TTS (Minutes), TTD (Minutes), Consent Received, Medical Records, Physician follow up form, EOLOA State, Death Certificate, All Recodrs in DRC, (empty), Riverside EOLOA, Referred From.
+Headers (Row 1): ti (possibly typo/ID), Date, Patient Name, DOB, Age, City, 1st request, 2nd request, CP Doctor, CP Completed, RXNT Info, WR, Hospice, Prescription Submit, (empty), invoice amount, PAID, Check list, Ingestion Date, Ingestion Location, TTS (Minutes), TTD (Minutes), Consent Received, Medical Records, Physician follow up form, EOLOA State, Death Certificate, All Recodrs in DRC, (empty), Riverside EOLOA, Referred From.
 Data Points and Types (based on sample rows):
 Date: Excel serial dates (e.g., 45523 → ~2024-07-01; type: number/date).
 Patient Name: Full names (e.g., "Adam Jones", "Emily Carter"; type: string).
 DOB: Excel serial dates (e.g., 14647 → ~1940-02-01; type: number/date).
 Age: Calculated ages (e.g., 84, 75; type: integer).
-Area: Locations (e.g., "san diego", "Encinitas"; type: string).
+City: Locations (e.g., "san diego", "Encinitas"; type: string).
 1st/2nd request: Dates (e.g., 45525; type: number/date).
 CP Doctor: Doctor names (e.g., "Andzel, Gaja", "Dr. Lisa Green"; type: string).
 CP Completed: Statuses (e.g., 45529 or "complete", "pending"; type: mixed number/string).
@@ -377,7 +377,7 @@ Main Layout: Sidebar with tabs (Active, Closed, Outstanding, Outreach, Consultin
 Search Bar: Global fuzzy search (e.g., "Adam Jones" → card with details from Active sheet + linked notes/hyperlinks; opens in modal).
 Dashboard View:
 Tables: Grid views of sheets (editable inline).
-Charts: e.g., Pie chart of patients by Area (from Active/Closed); Bar for TTS/TTD averages; Line for call logs over time.
+Charts: e.g., Pie chart of patients by City (from Active/Closed); Bar for TTS/TTD averages; Line for call logs over time.
 Metrics: Cards like "Active Patients: 10", "Outstanding Invoices: 5".
 Entity Pages: Click a patient/doctor/call → Dedicated view with all related data (e.g., for "Emily Carter": Active row + outreach if past + notes).
 Note Editor: Inline or modal textarea; insert hyperlink button (prompts for URL, e.g., Gmail link). Save pushes to Notes tab. Display notes with clickable links (open in new tab, stay in app).
@@ -389,7 +389,7 @@ Visuals: Use Chart.js for simple charts (e.g., age distribution histogram from D
 Aggregates: JS-calculated (e.g., total invoice amount from Active: sum of "invoice amount" where PAID="no").
 Search Functionality:
 Input: Any string (e.g., "Stephen Clare" – assume sample addition; searches all tabs for matches in Patient Name, Person contact, etc.).
-Output: Results list with snippets (e.g., "Active Patient: Age 55, Area La Jolla") + buttons to view full or add note.
+Output: Results list with snippets (e.g., "Active Patient: Age 55, City La Jolla") + buttons to view full or add note.
 Advanced: Filter by type (e.g., "patients only").
 Note-Taking:
 Add to any entity (e.g., right-click row → "Add Note").

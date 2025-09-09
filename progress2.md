@@ -8,7 +8,7 @@ Notes are stored in the "Notes" Google Sheets tab (columns: EntityID like "Adam 
 Display: Notes appear in a collapsible section below the entity details, with timestamps and user attribution for sharing (e.g., "Alyssa: Check tax docs [link] – 2025-07-10").
 Basic Attachments/Extensions:
 Currently, no direct "attach task" but notes can reference tasks informally (e.g., "TODO: Follow up on invoice").
-Alignment to Datapoints: Notes are linked via EntityID to key fields like Patient Name (from Active/Closed/Outstanding), CP Doctor (from Consulting Docs), or Person Contact (from Call Log). For example, searching "Adam Jones" pulls Active row data (Age: 84, Area: san diego, Invoice: 4200) + associated notes.
+Alignment to Datapoints: Notes are linked via EntityID to key fields like Patient Name (from Active/Closed/Outstanding), CP Doctor (from Consulting Docs), or Person Contact (from Call Log). For example, searching "Adam Jones" pulls Active row data (Age: 84, City: san diego, Invoice: 4200) + associated notes.
 This keeps it simple and crash-free, but we can expand for tasks and calendars as you suggested.
 
 Proposed Enhancements: Aligning to Datapoints, Tasks, Calendar, and Sharing
@@ -78,7 +78,7 @@ Alignment to Datapoints:
 Generate todos from statuses: e.g., If Check List="in progress", auto-task "Complete checklist for [Patient]".
 Outstanding Sheet: All rows → Todos like "Resolve [Patient Name] - [CP Completed=pending]".
 Call Log Outcome: If "questions", task "Address questions from [Person Contact] re: [Patient]".
-Prioritize by Age/Area (e.g., older patients first) or Invoice Amount (high-value unpaid).
+Prioritize by Age/City (e.g., older patients first) or Invoice Amount (high-value unpaid).
 Implementation:
 New Sidebar Tab: "Todos" – Table view of tasks, sortable by due date/assignee.
 Integrates with Google Tasks API for real sharing (better than Sheets for reminders/notifications).

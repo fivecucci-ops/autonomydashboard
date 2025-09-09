@@ -170,7 +170,7 @@
                     <div class="pinned-patient-value" id="pinned-email">-</div>
                 </div>
                 <div class="pinned-patient-detail">
-                    <div class="pinned-patient-label">Area</div>
+                    <div class="pinned-patient-label">City</div>
                     <div class="pinned-patient-value" id="pinned-address">-</div>
                 </div>
                 <div class="pinned-patient-detail">
@@ -328,7 +328,7 @@
             
             // In a real app, this could integrate with a phone system
             // For now, just show a note template
-            const note = `Call ${pinnedPatient['Patient Name']} - ${pinnedPatient['Area']} - Age ${pinnedPatient['Age']}`;
+            const note = `Call ${pinnedPatient['Patient Name']} - ${pinnedPatient['City']} - Age ${pinnedPatient['Age']}`;
             navigator.clipboard.writeText(note).then(() => {
                 setStatus('Call note copied to clipboard', 'success');
             }).catch(() => {

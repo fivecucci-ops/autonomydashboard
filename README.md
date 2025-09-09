@@ -79,7 +79,7 @@ The application reads from `Dashboard Clone.xlsx` with the following sheets:
 ### Key Data Fields
 - `Patient Name`: Primary identifier
 - `Age`: Patient age
-- `Area`: Geographic location
+- `City`: Geographic location
 - `CP Doctor`: Consulting physician
 - `Hospice`: Hospice provider
 - `PAID`: Payment status (yes/no)

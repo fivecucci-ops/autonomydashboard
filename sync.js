@@ -6,6 +6,15 @@ const path = require('path');
 require('dotenv').config();
 const XLSX = require('xlsx');
 
+// Cache for Excel data to prevent repeated file reads
+let dataCache = {
+    active: null,
+    vendors: null,
+    chat: null,
+    lastModified: null,
+    cacheTimeout: 30000 // 30 seconds cache
+};
+
 /**
  * OAuth Instructions:
  * 1. Go to https://console.cloud.google.com/ and create a new project.
@@ -50,137 +59,169 @@ async function getNewToken(oAuth2Client) {
     throw new Error('Please authorize the app and save the token to token.json manually.');
 }
 
-async function readActiveTab(spreadsheetId) {
+// Cache management functions
+async function isCacheValid() {
+    if (!dataCache.lastModified) return false;
+    
+    const now = Date.now();
+    const filePath = path.join(__dirname, 'Dashboard Clone.xlsx');
+    
+    try {
+        const stats = await fs.stat(filePath);
+        const fileModified = stats.mtime.getTime();
+        
+        // Check if file was modified since last cache or cache expired
+        return (fileModified <= dataCache.lastModified) && 
+               (now - dataCache.lastModified < dataCache.cacheTimeout);
+    } catch (err) {
+        return false;
+    }
+}
+
+function clearCache() {
+    dataCache.active = null;
+    dataCache.vendors = null;
+    dataCache.chat = null;
+    dataCache.lastModified = null;
+    console.log('Cache cleared - next request will reload data');
+}
+
+async function loadExcelData() {
     const localFilePath = path.join(__dirname, 'Dashboard Clone.xlsx');
     
     try {
         // Check if file exists
         await fs.access(localFilePath);
-        console.log('Local file found, reading from Dashboard Clone.xlsx');
+        console.log('Loading Excel data from Dashboard Clone.xlsx');
         
         // Read the Excel file
         const workbook = XLSX.readFile(localFilePath);
         console.log('Available sheets:', workbook.SheetNames);
         
-        // Get the Active sheet
-        const worksheet = workbook.Sheets['Active'];
-        if (!worksheet) {
+        // Get all sheets
+        const activeSheet = workbook.Sheets['Active'];
+        const vendorsSheet = workbook.Sheets['Vendors'];
+        const chatSheet = workbook.Sheets['Chat'];
+        
+        if (!activeSheet) {
             throw new Error('Active sheet not found in local file. Available sheets: ' + workbook.SheetNames.join(', '));
         }
         
-        // Convert sheet to JSON
-        const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: null});
-        if (!rows || rows.length === 0) {
-            console.log('No data found in Active sheet.');
-            return [];
-        }
-        
-        console.log(`Found ${rows.length} rows in Active sheet`);
-        const headers = rows[0];
-        console.log('Headers:', headers);
-        
-        // Convert rows to objects
-        const data = rows.slice(1).map(row => {
+        // Process Active sheet
+        const activeRows = XLSX.utils.sheet_to_json(activeSheet, {header: 1, defval: null});
+        const activeHeaders = activeRows[0];
+        const activeData = activeRows.slice(1).map(row => {
             const obj = {};
-            headers.forEach((header, i) => {
+            activeHeaders.forEach((header, i) => {
                 obj[header] = row[i] !== undefined ? row[i] : null;
             });
             return obj;
         });
         
-        console.log(`Processed ${data.length} data rows`);
-        return data;
+        // Process Vendors sheet
+        let vendorsData = [];
+        if (vendorsSheet) {
+            const vendorsRows = XLSX.utils.sheet_to_json(vendorsSheet, {header: 1, defval: null});
+            const vendorsHeaders = vendorsRows[0];
+            vendorsData = vendorsRows.slice(1).map(row => {
+                const obj = {};
+                vendorsHeaders.forEach((header, i) => {
+                    obj[header] = row[i] !== undefined ? row[i] : null;
+                });
+                return obj;
+            });
+        }
+        
+        // Process Chat sheet
+        let chatData = [];
+        if (chatSheet) {
+            const chatRows = XLSX.utils.sheet_to_json(chatSheet, {header: 1, defval: null});
+            const chatHeaders = chatRows[0];
+            chatData = chatRows.slice(1).map(row => {
+                const obj = {};
+                chatHeaders.forEach((header, i) => {
+                    obj[header] = row[i] !== undefined ? row[i] : null;
+                });
+                return obj;
+            });
+        }
+        
+        // Update cache
+        dataCache.active = activeData;
+        dataCache.vendors = vendorsData;
+        dataCache.chat = chatData;
+        dataCache.lastModified = Date.now();
+        
+        console.log(`Cached ${activeData.length} active patients, ${vendorsData.length} vendors, ${chatData.length} chat messages`);
+        return dataCache;
         
     } catch (err) {
-        console.error('Error reading local XLSX file:', err);
+        console.error('Error loading Excel data:', err);
         if (err.code === 'ENOENT') {
             throw new Error('Dashboard Clone.xlsx file not found in project root. Please ensure the file exists.');
         }
-        throw new Error(`Failed to read local XLSX file: ${err.message}`);
+        throw new Error(`Failed to load Excel data: ${err.message}`);
+    }
+}
+
+async function readActiveTab(spreadsheetId) {
+    try {
+        // Check if cache is valid
+        if (await isCacheValid()) {
+            console.log('Using cached Active data');
+            return dataCache.active || [];
+        }
+        
+        // Load fresh data
+        await loadExcelData();
+        return dataCache.active || [];
+        
+    } catch (err) {
+        console.error('Error reading Active tab:', err);
+        throw new Error(`Failed to read Active tab: ${err.message}`);
     }
 }
 
 async function readVendorsTab(spreadsheetId) {
-    const localFilePath = path.join(__dirname, 'Dashboard Clone.xlsx');
-    
     try {
-        // Check if file exists
-        await fs.access(localFilePath);
-        
-        // Read the Excel file
-        const workbook = XLSX.readFile(localFilePath);
-        
-        // Get the Vendors sheet
-        const worksheet = workbook.Sheets['Vendors'];
-        if (!worksheet) {
-            throw new Error('Vendors sheet not found in local file. Available sheets: ' + workbook.SheetNames.join(', '));
+        // Check if cache is valid
+        if (await isCacheValid()) {
+            console.log('Using cached Vendors data');
+            return dataCache.vendors || [];
         }
         
-        // Convert sheet to JSON
-        const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: null});
-        if (!rows || rows.length === 0) {
-            console.log('No data found in Vendors sheet.');
-            return [];
-        }
-        
-        console.log(`Found ${rows.length} rows in Vendors sheet`);
-        const headers = rows[0];
-        
-        // Convert rows to objects
-        const data = rows.slice(1).map(row => {
-            const obj = {};
-            headers.forEach((header, i) => {
-                obj[header] = row[i] !== undefined ? row[i] : null;
-            });
-            return obj;
-        });
-        
-        console.log(`Processed ${data.length} vendor records`);
-        return data;
+        // Load fresh data
+        await loadExcelData();
+        return dataCache.vendors || [];
         
     } catch (err) {
         console.error('Error reading Vendors tab:', err);
-        if (err.code === 'ENOENT') {
-            throw new Error('Dashboard Clone.xlsx file not found in project root. Please ensure the file exists.');
-        }
         throw new Error(`Failed to read Vendors tab: ${err.message}`);
     }
 }
 
 async function readChatTab(spreadsheetId, currentUser = null) {
-    const localFilePath = path.join(__dirname, 'Dashboard Clone.xlsx');
-    
     try {
-        // Check if file exists
-        await fs.access(localFilePath);
-        
-        // Read the Excel file
-        const workbook = XLSX.readFile(localFilePath);
-        
-        // Get the Chat sheet
-        const worksheet = workbook.Sheets['Chat'];
-        if (!worksheet) {
-            throw new Error('Chat sheet not found in local file. Available sheets: ' + workbook.SheetNames.join(', '));
+        // Check if cache is valid
+        if (await isCacheValid()) {
+            console.log('Using cached Chat data');
+            let data = dataCache.chat || [];
+            
+            // Filter messages based on current user if specified
+            if (currentUser) {
+                data = data.filter(message => {
+                    const participants = message.Participants || '';
+                    return participants.includes(`<${currentUser}>`);
+                });
+            }
+            
+            console.log(`Processed ${data.length} chat messages${currentUser ? ` for ${currentUser}` : ''}`);
+            return data;
         }
         
-        // Convert sheet to JSON
-        const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: null});
-        if (!rows || rows.length === 0) {
-            console.log('No data found in Chat sheet.');
-            return [];
-        }
-        
-        console.log(`Found ${rows.length} rows in Chat sheet`);
-        const headers = rows[0];
-        
-        // Convert rows to objects
-        let data = rows.slice(1).map(row => {
-            const obj = {};
-            headers.forEach((header, i) => {
-                obj[header] = row[i] !== undefined ? row[i] : null;
-            });
-            return obj;
-        });
+        // Load fresh data
+        await loadExcelData();
+        let data = dataCache.chat || [];
         
         // Filter messages based on current user if specified
         if (currentUser) {
@@ -195,9 +236,6 @@ async function readChatTab(spreadsheetId, currentUser = null) {
         
     } catch (err) {
         console.error('Error reading Chat tab:', err);
-        if (err.code === 'ENOENT') {
-            throw new Error('Dashboard Clone.xlsx file not found in project root. Please ensure the file exists.');
-        }
         throw new Error(`Failed to read Chat tab: ${err.message}`);
     }
 }
@@ -264,7 +302,7 @@ async function writeActiveTab(patientData) {
         const headers = rows[0] || [];
         
         // Map patient intake data to Excel columns matching exact order
-        // Headers: ti, Date, Patient Name, DOB, Age, Area, Phone Number, Email, 
+        // Headers: ti, Date, Patient Name, DOB, Age, City, Phone Number, Email, 
         // 1st request, 2nd request, CP Doctor, CP Completed, RXNT Info, WR, Hospice, 
         // Prescription Submit, [empty], invoice amount, PAID, Check list, Ingestion Date, 
         // Ingestion Location, TTS (Minutes), TTD (Minutes), Consent Received, Medical Records,
@@ -277,7 +315,7 @@ async function writeActiveTab(patientData) {
             patientData.patientName || '',                    // Patient Name
             patientData.dob || '',                            // DOB
             patientData.age || '',                            // Age
-            patientData.city || '',                           // Area (now City)
+            patientData.city || '',                           // City
             patientData.phone || '',                          // Phone Number
             patientData.email || '',                          // Email
             '',                                                // 1st request
@@ -318,6 +356,9 @@ async function writeActiveTab(patientData) {
         
         // Write back to file
         XLSX.writeFile(workbook, localFilePath);
+        
+        // Clear cache since data was modified
+        clearCache();
         
         console.log('Successfully added patient to Active tab:', patientData.patientName);
         return { success: true, message: 'Patient added to Excel file' };

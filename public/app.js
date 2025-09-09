@@ -2,6 +2,9 @@
 
 let currentData = {};
 let currentTab = 'dashboard';
+let isLoading = false;
+let dataCache = new Map();
+const CACHE_DURATION = 30000; // 30 seconds
 
 /**
  * Set status message (make available globally)
@@ -11,19 +14,88 @@ function setStatus(message, type = 'success') {
     if (status) {
         status.textContent = message;
         status.className = type;
+        
+        // Auto-hide success messages after 3 seconds
+        if (type === 'success') {
+            setTimeout(() => {
+                if (status.textContent === message) {
+                    status.textContent = '';
+                    status.className = '';
+                }
+            }, 3000);
+        }
     } else {
         console.log(`Status (${type}): ${message}`);
     }
+}
+
+/**
+ * Show error message with better UX
+ */
+function showError(message, duration = 5000) {
+    setStatus(message, 'error');
+    
+    // Create a more prominent error notification
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-notification';
+    errorDiv.innerHTML = `
+        <div style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4757;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10000;
+            max-width: 300px;
+            animation: slideIn 0.3s ease;
+        ">
+            <strong>Error:</strong> ${message}
+        </div>
+    `;
+    
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+        errorDiv.remove();
+    }, duration);
 }
 
 // Make setStatus available globally immediately
 window.setStatus = setStatus;
 
 /**
+ * Cache management functions
+ */
+function getCachedData(key) {
+    const cached = dataCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+    }
+    return null;
+}
+
+function setCachedData(key, data) {
+    dataCache.set(key, {
+        data: data,
+        timestamp: Date.now()
+    });
+}
+
+function clearCache() {
+    dataCache.clear();
+}
+
+/**
  * Initialize the main application (called after authentication)
  */
 function initMainApp() {
     console.log('Initializing main app');
+    
+    // Show loading state
+    showLoadingState();
     
     // Load all persisted data first
     loadPersistedData();
@@ -34,9 +106,27 @@ function initMainApp() {
     // Load dashboard by default
     setTimeout(() => {
         switchTab('dashboard', document.querySelector('[data-tab="dashboard"]'));
+        hideLoadingState();
     }, 100);
     
     setStatus('Local Mode Active - Ready', 'success');
+}
+
+/**
+ * Show loading state
+ */
+function showLoadingState() {
+    const content = document.getElementById('content');
+    if (content) {
+        content.innerHTML = '<div class="loading">Loading dashboard...</div>';
+    }
+}
+
+/**
+ * Hide loading state
+ */
+function hideLoadingState() {
+    // Loading state will be replaced by actual content
 }
 
 
