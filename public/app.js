@@ -122,36 +122,8 @@ function refreshAllTaskStatuses() {
                     });
                 }
                 
-                // Update visual status
-                const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
-                if (taskItem) {
-                    const taskNumber = taskItem.querySelector('.task-number');
-                    const taskStatus = taskItem.querySelector('.task-status');
-                    
-                    // Remove old classes
-                    taskItem.classList.remove('not-started', 'partial', 'complete');
-                    taskNumber.classList.remove('not-started', 'partial', 'complete');
-                    
-                    // Determine new status
-                    let statusClass, statusText;
-                    if (completedSubtasks === 0) {
-                        statusClass = 'not-started';
-                        statusText = 'Not Started';
-                    } else if (completedSubtasks === totalSubtasks) {
-                        statusClass = 'complete';
-                        statusText = 'Complete';
-                    } else {
-                        statusClass = 'partial';
-                        statusText = 'Partially Complete';
-                    }
-                    
-                    // Apply new classes
-                    taskItem.classList.add(statusClass);
-                    taskNumber.classList.add(statusClass);
-                    taskStatus.textContent = statusText;
-                    
-                    console.log(`Refreshed task ${taskIndex} status: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
-                }
+                // Update task number color based on completion status
+                updateTaskNumberColor(patientId, taskIndex);
             });
         }
     });
@@ -1043,7 +1015,7 @@ async function loadActivePatients() {
         // Store data globally
         currentData.active = localPatients;
         
-        // Create patient sections
+        // Create patient cards (default view)
         const content = document.getElementById('content');
         content.innerHTML = `
             <div class="active-header">
@@ -1054,7 +1026,7 @@ async function loadActivePatients() {
                     <button class="btn-secondary" onclick="switchToSectionView()">Sections</button>
                 </div>
             </div>
-            ${localPatients.length > 0 ? generateActivePatientSections(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
+            ${localPatients.length > 0 ? generateActivePatientCards(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
         `;
         
         setStatus('Active patients loaded successfully', 'success');
@@ -1081,6 +1053,7 @@ async function loadActivePatients() {
                 <div class="active-view-toggle">
                     <button class="btn-secondary" onclick="switchToTableView()">Table</button>
                     <button class="btn-primary" onclick="switchToCardView()">Cards</button>
+                    <button class="btn-secondary" onclick="switchToSectionView()">Sections</button>
                 </div>
             </div>
             ${localPatients.length > 0 ? generateActivePatientCards(localPatients) : '<p>No active patients. Add a patient using the Patient Intake form.</p>'}
@@ -1879,6 +1852,138 @@ async function createTask(title, dueDate) {
 }
 
 /**
+ * Update task number color based on subtask completion status
+ */
+function updateTaskNumberColor(patientId, taskIndex) {
+    console.log(`updateTaskNumberColor called for patientId: ${patientId}, taskIndex: ${taskIndex}`);
+    console.log('taskCompletionData:', window.taskCompletionData);
+    
+    if (!window.taskCompletionData[patientId]) {
+        console.log(`No task data found for patientId: ${patientId}`);
+        return;
+    }
+    
+    const task = window.taskCompletionData[patientId][taskIndex];
+    if (!task) {
+        console.log(`No task found at index ${taskIndex} for patientId: ${patientId}`);
+        return;
+    }
+    
+    // Calculate completion status
+    let completedSubtasks = 0;
+    let totalSubtasks = 0;
+    
+    if (task.id === 'invoice') {
+        // Special logic for Quickbooks Invoice
+        const sentInvoice = task.subtasks.find(s => s.name === 'Sent Invoice')?.complete || false;
+        const paymentReceived = task.subtasks.find(s => s.name === 'Payment Received');
+        const paidViaQuickbooks = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Quickbooks')?.complete || false;
+        const paidViaCheck = paymentReceived?.subSubtasks?.find(s => s.name === 'Paid via Check')?.complete || false;
+        
+        totalSubtasks = task.subtasks.length;
+        
+        // Task is complete if: Sent Invoice + (Paid via Quickbooks OR Paid via Check)
+        if (sentInvoice && (paidViaQuickbooks || paidViaCheck)) {
+            completedSubtasks = totalSubtasks;
+        } else if (sentInvoice) {
+            completedSubtasks = 1; // Partial completion
+        }
+    } else if (task.id === 'written-request') {
+        // Special logic for Written Request - main task can be checked independently
+        const mainTaskComplete = task.complete;
+        const subtaskComplete = task.subtasks[0]?.complete || false;
+        
+        totalSubtasks = 2; // Main task + 1 subtask
+        
+        if (mainTaskComplete && subtaskComplete) {
+            completedSubtasks = 2; // Both complete
+        } else if (mainTaskComplete || subtaskComplete) {
+            completedSubtasks = 1; // Partial completion
+        } else {
+            completedSubtasks = 0; // Neither complete
+        }
+    } else if (task.id === 'adobe-forms') {
+        // Special logic for Send Adobe Forms - reflects Written Request completion
+        const writtenRequestTask = window.taskCompletionData[patientId].find(t => t.id === 'written-request');
+        if (writtenRequestTask) {
+            const writtenRequestComplete = writtenRequestTask.complete;
+            const completedByPatientComplete = writtenRequestTask.subtasks[0]?.complete || false;
+            
+            totalSubtasks = 2; // Written Request + Completed by Patient
+            
+            if (writtenRequestComplete && completedByPatientComplete) {
+                completedSubtasks = 2; // Both complete
+            } else if (writtenRequestComplete) {
+                completedSubtasks = 1; // Partial completion (Written Request checked)
+            } else {
+                completedSubtasks = 0; // Not started
+            }
+        } else {
+            totalSubtasks = 1;
+            completedSubtasks = 0;
+        }
+    } else {
+        // Standard logic for other tasks
+        if (task.subtasks.length === 0) {
+            // For tasks with no subtasks, check if the task itself is marked as complete
+            totalSubtasks = 1;
+            completedSubtasks = task.complete ? 1 : 0;
+        } else {
+            totalSubtasks = task.subtasks.length;
+            task.subtasks.forEach(subtask => {
+                // Check if subtask is complete (including sub-subtasks)
+                if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
+                    // For subtasks with sub-subtasks, check if all sub-subtasks are complete
+                    let allSubSubtasksComplete = true;
+                    subtask.subSubtasks.forEach(subSubtask => {
+                        if (!subSubtask.complete) {
+                            allSubSubtasksComplete = false;
+                        }
+                    });
+                    if (allSubSubtasksComplete) {
+                        completedSubtasks++;
+                    }
+                } else {
+                    // For regular subtasks without sub-subtasks
+                    if (subtask.complete) completedSubtasks++;
+                }
+            });
+        }
+    }
+    
+    // Find the task element and update its color
+    const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
+    if (!taskItem) return;
+    
+    const taskNumber = taskItem.querySelector('.task-number');
+    const taskStatus = taskItem.querySelector('.task-status');
+    
+    // Remove old status classes
+    taskItem.classList.remove('not-started', 'partial', 'complete');
+    taskNumber.classList.remove('not-started', 'partial', 'complete');
+    
+    // Determine new status and color
+    let statusClass, statusText;
+    if (completedSubtasks === 0) {
+        statusClass = 'not-started'; // Orange
+        statusText = 'Not Started';
+    } else if (completedSubtasks === totalSubtasks) {
+        statusClass = 'complete'; // Green
+        statusText = 'Complete';
+    } else {
+        statusClass = 'partial'; // Yellow
+        statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+    }
+    
+    // Apply new classes
+    taskItem.classList.add(statusClass);
+    taskNumber.classList.add(statusClass);
+    taskStatus.textContent = statusText;
+    
+    console.log(`Updated task ${taskIndex} color: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
+}
+
+/**
  * Update task status (mock implementation for local mode)
  */
 async function updateTaskStatus(taskId, status) {
@@ -2087,7 +2192,8 @@ function exportPatientData() {
         
         // Create export data structure
         const exportData = patients.map((patient, index) => {
-            const patientId = patient.id || `patient-${patient['Patient Name']?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}-${Date.now()}`;
+            const patientName = patient['Patient Name'] || 'Unknown';
+            const patientId = patient.id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${index}`;
             const progress = calculateProgress(patientId);
             
             return {
@@ -2153,7 +2259,8 @@ function archivePatient(patientIndex) {
             localStorage.setItem('archivedPatients', JSON.stringify(archivedPatients));
             
             // Remove task completion data for this patient
-            const patientId = patients[patientIndex].id || `patient-${patients[patientIndex]['Patient Name']?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}-${Date.now()}`;
+            const patientName = patients[patientIndex]['Patient Name'] || 'Unknown';
+            const patientId = patients[patientIndex].id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${patientIndex}`;
             if (window.taskCompletionData && window.taskCompletionData[patientId]) {
                 delete window.taskCompletionData[patientId];
             }
@@ -2507,7 +2614,8 @@ function markAllTasksComplete(patientName) {
             return;
         }
         
-        const patientId = patients[patientIndex].id || `patient-${patients[patientIndex]['Patient Name']?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}-${Date.now()}`;
+        const patientName = patients[patientIndex]['Patient Name'] || 'Unknown';
+        const patientId = patients[patientIndex].id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${patientIndex}`;
         
         // Initialize task completion data if not exists
         if (!window.taskCompletionData[patientId]) {
@@ -2550,18 +2658,25 @@ function markAllTasksComplete(patientName) {
 function initializePatientTasks() {
     return [
         { 
-            id: 'wr', 
-            name: 'Send Adobe Forms', 
+            id: 'written-request', 
+            name: 'Written Request', 
+            complete: false,
             subtasks: [
                 { 
-                    name: 'Written Request', 
-                    complete: false,
-                    subSubtasks: [
-                        { name: 'Completed by Patient', complete: false }
-                    ]
-                },
-                { name: 'Payment Schedule Form', complete: false }
+                    name: 'Completed by Patient', 
+                    complete: false
+                }
             ]
+        },
+        { 
+            id: 'payment-schedule', 
+            name: 'Payment Schedule Form', 
+            subtasks: []
+        },
+        { 
+            id: 'adobe-forms', 
+            name: 'Send Adobe Forms', 
+            subtasks: []
         },
         { 
             id: 'invoice', 
@@ -2689,7 +2804,8 @@ function initializePatientTasks() {
 
 // Helper to generate improved timeline steps
 function generateImprovedTimelineSteps(patient, index) {
-    const patientId = patient.id || `patient-${patient['Patient Name']?.replace(/\s+/g, '-').toLowerCase() || 'unknown'}-${Date.now()}`;
+    const patientName = patient['Patient Name'] || 'Unknown';
+    const patientId = patient.id || `patient-${patientName.replace(/\s+/g, '-').toLowerCase()}-${index}`;
     const tasks = window.taskCompletionData[patientId] || initializePatientTasks();
     
     
@@ -2720,20 +2836,82 @@ function generateImprovedTimelineSteps(patient, index) {
                 statusClass = 'not-started';
                 statusText = 'Not Started';
             }
-        } else {
-            // Standard logic for other tasks
-            completedSubtasks = task.subtasks.filter(s => s.complete).length;
-            totalSubtasks = task.subtasks.length;
+        } else if (task.id === 'written-request') {
+            // Special logic for Written Request - main task can be checked independently
+            const mainTaskComplete = task.complete;
+            const subtaskComplete = task.subtasks[0]?.complete || false;
             
-            if (completedSubtasks === 0) {
-                statusClass = 'not-started';
-                statusText = 'Not Started';
-            } else if (completedSubtasks === totalSubtasks) {
+            totalSubtasks = 2; // Main task + 1 subtask
+            
+            if (mainTaskComplete && subtaskComplete) {
+                completedSubtasks = 2;
                 statusClass = 'complete';
                 statusText = 'Complete';
-            } else {
+            } else if (mainTaskComplete || subtaskComplete) {
+                completedSubtasks = 1;
                 statusClass = 'partial';
-                statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+                statusText = 'Partially Complete';
+            } else {
+                completedSubtasks = 0;
+                statusClass = 'not-started';
+                statusText = 'Not Started';
+            }
+        } else if (task.id === 'adobe-forms') {
+            // Special logic for Send Adobe Forms - reflects Written Request completion
+            const writtenRequestTask = tasks.find(t => t.id === 'written-request');
+            if (writtenRequestTask) {
+                const writtenRequestComplete = writtenRequestTask.complete;
+                const completedByPatientComplete = writtenRequestTask.subtasks[0]?.complete || false;
+                
+                totalSubtasks = 2; // Written Request + Completed by Patient
+                
+                if (writtenRequestComplete && completedByPatientComplete) {
+                    completedSubtasks = 2;
+                    statusClass = 'complete';
+                    statusText = 'Complete';
+                } else if (writtenRequestComplete) {
+                    completedSubtasks = 1;
+                    statusClass = 'partial';
+                    statusText = 'Partially Complete';
+                } else {
+                    completedSubtasks = 0;
+                    statusClass = 'not-started';
+                    statusText = 'Not Started';
+                }
+            } else {
+                totalSubtasks = 1;
+                completedSubtasks = 0;
+                statusClass = 'not-started';
+                statusText = 'Not Started';
+            }
+        } else {
+            // Standard logic for other tasks
+            if (task.subtasks.length === 0) {
+                // For tasks with no subtasks, check if the task itself is marked as complete
+                totalSubtasks = 1;
+                completedSubtasks = task.complete ? 1 : 0;
+                
+                if (completedSubtasks === 0) {
+                    statusClass = 'not-started';
+                    statusText = 'Not Started';
+                } else {
+                    statusClass = 'complete';
+                    statusText = 'Complete';
+                }
+            } else {
+                completedSubtasks = task.subtasks.filter(s => s.complete).length;
+                totalSubtasks = task.subtasks.length;
+        
+        if (completedSubtasks === 0) {
+            statusClass = 'not-started';
+            statusText = 'Not Started';
+        } else if (completedSubtasks === totalSubtasks) {
+            statusClass = 'complete';
+            statusText = 'Complete';
+        } else {
+            statusClass = 'partial';
+            statusText = `${completedSubtasks}/${totalSubtasks} Complete`;
+                }
             }
         }
         
@@ -2741,17 +2919,19 @@ function generateImprovedTimelineSteps(patient, index) {
         
         html += `
             <div class="task-item ${statusClass}" data-task-index="${taskIndex}">
-                <div class="task-header" onclick="toggleTaskDetails('${patientId}', ${taskIndex})">
+                <div class="task-header" onclick="${task.subtasks.length === 0 ? `toggleMainTask('${patientId}', ${taskIndex})` : `toggleTaskDetails('${patientId}', ${taskIndex})`}">
                     <div class="task-number ${statusClass}">${taskIndex + 1}</div>
                     <div class="task-info">
                         <div class="task-name">${task.name}</div>
                         <div class="task-status">${statusText}</div>
                     </div>
-                    <div class="task-expand">▼</div>
+                    <div class="task-expand">${task.subtasks.length === 0 ? '' : '▼'}</div>
                 </div>
+                ${task.subtasks.length > 0 ? `
                 <div class="task-subtasks" id="subtasks-${patientId}-${taskIndex}" style="display: none;">
                     ${generateSubtasks(task, patientId, taskIndex)}
                 </div>
+                ` : ''}
             </div>
         `;
     });
@@ -2766,8 +2946,33 @@ function generateSubtasks(task, patientId, taskIndex) {
     const patient = window.patientsData?.[patientId] || {};
     let html = '<ul class="subtask-list">';
     
+    // Special handling for Written Request task - show main task checkbox
+    if (task.id === 'written-request') {
+        html += `
+            <li class="subtask-item main-task-item">
+                <input type="checkbox" 
+                    id="main-task-${patientId}-${taskIndex}"
+                    ${task.complete ? 'checked' : ''}
+                    onchange="toggleMainTask('${patientId}', ${taskIndex})">
+                <label for="main-task-${patientId}-${taskIndex}">Written Request</label>
+            </li>
+        `;
+        
+        // Add the subtask
+        task.subtasks.forEach((subtask, subIndex) => {
+            html += `
+                <li class="subtask-item">
+                    <input type="checkbox" 
+                        id="subtask-${patientId}-${taskIndex}-${subIndex}"
+                        ${subtask.complete ? 'checked' : ''}
+                        onchange="toggleSubtask('${patientId}', ${taskIndex}, ${subIndex})">
+                    <label for="subtask-${patientId}-${taskIndex}-${subIndex}">${subtask.name}</label>
+                </li>
+            `;
+        });
+    }
     // Special handling for Quickbooks Invoice task to add "or" between payment options
-    if (task.id === 'invoice') {
+    else if (task.id === 'invoice') {
     task.subtasks.forEach((subtask, subIndex) => {
         html += `
             <li class="subtask-item">
@@ -2866,8 +3071,13 @@ function generateSubtasks(task, patientId, taskIndex) {
 
 // Calculate overall progress for a patient (including sub-subtasks)
 function calculateProgress(patientId) {
+    console.log(`calculateProgress called for patientId: ${patientId}`);
     const tasks = window.taskCompletionData[patientId];
-    if (!tasks) return 0;
+    if (!tasks) {
+        console.log(`No tasks found for patientId: ${patientId}`);
+        return 0;
+    }
+    console.log(`Tasks found for ${patientId}:`, tasks);
     
     let totalItems = 0;
     let completedItems = 0;
@@ -2890,28 +3100,60 @@ function calculateProgress(patientId) {
                     completedItems++; // Either payment method counts
                 }
             }
+        } else if (task.id === 'written-request') {
+            // Special logic for Written Request - main task can be checked independently
+            const mainTaskComplete = task.complete;
+            const subtaskComplete = task.subtasks[0]?.complete || false;
+            
+            totalItems += 2; // Main task + 1 subtask
+            
+            if (mainTaskComplete) completedItems++;
+            if (subtaskComplete) completedItems++;
+        } else if (task.id === 'adobe-forms') {
+            // Special logic for Send Adobe Forms - reflects Written Request completion
+            const writtenRequestTask = tasks.find(t => t.id === 'written-request');
+            if (writtenRequestTask) {
+                const writtenRequestComplete = writtenRequestTask.complete;
+                const completedByPatientComplete = writtenRequestTask.subtasks[0]?.complete || false;
+                
+                totalItems += 2; // Written Request + Completed by Patient
+                
+                if (writtenRequestComplete && completedByPatientComplete) {
+                    completedItems += 2; // Both complete
+                } else if (writtenRequestComplete) {
+                    completedItems += 1; // Partial completion (Written Request checked)
+                }
+            } else {
+                totalItems += 1;
+            }
         } else {
             // Standard logic for other tasks
-            task.subtasks.forEach(subtask => {
+            if (task.subtasks.length === 0) {
+                // For tasks with no subtasks, check if the task itself is marked as complete
                 totalItems++;
-                
-                // Check if subtask is complete (including sub-subtasks)
-                if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
-                    // For subtasks with sub-subtasks, check if all sub-subtasks are complete
-                    let allSubSubtasksComplete = true;
-                    subtask.subSubtasks.forEach(subSubtask => {
-                        if (!subSubtask.complete) {
-                            allSubSubtasksComplete = false;
+                if (task.complete) completedItems++;
+            } else {
+                task.subtasks.forEach(subtask => {
+                    totalItems++;
+                    
+                    // Check if subtask is complete (including sub-subtasks)
+                    if (subtask.subSubtasks && subtask.subSubtasks.length > 0) {
+                        // For subtasks with sub-subtasks, check if all sub-subtasks are complete
+                        let allSubSubtasksComplete = true;
+                        subtask.subSubtasks.forEach(subSubtask => {
+                            if (!subSubtask.complete) {
+                                allSubSubtasksComplete = false;
+                            }
+                        });
+                        if (allSubSubtasksComplete) {
+                            completedItems++;
                         }
-                    });
-                    if (allSubSubtasksComplete) {
-                        completedItems++;
+                    } else {
+                        // For regular subtasks without sub-subtasks
+                        if (subtask.complete) completedItems++;
                     }
-                } else {
-                    // For regular subtasks without sub-subtasks
-                    if (subtask.complete) completedItems++;
-                }
-            });
+                });
+            }
         }
     });
     
@@ -2956,6 +3198,48 @@ function toggleTaskDetails(patientId, taskIndex) {
     }
 }
 
+// Toggle main task completion status (for tasks with no subtasks)
+function toggleMainTask(patientId, taskIndex) {
+    const task = window.taskCompletionData[patientId][taskIndex];
+    
+    // Toggle main task
+    const checked = !task.complete;
+    task.complete = checked;
+    
+    console.log(`Toggled main task ${taskIndex} to ${checked} for patient ${patientId}`);
+    
+    // Update task number color based on completion status
+    updateTaskNumberColor(patientId, taskIndex);
+    
+    // If this is the Written Request task, also update the Send Adobe Forms task
+    if (task.id === 'written-request') {
+        const adobeFormsTaskIndex = window.taskCompletionData[patientId].findIndex(t => t.id === 'adobe-forms');
+        if (adobeFormsTaskIndex !== -1) {
+            updateTaskNumberColor(patientId, adobeFormsTaskIndex);
+        }
+    }
+    
+    console.log('Current task data after toggle:', window.taskCompletionData[patientId][taskIndex]);
+    
+    // Update overall progress
+    const progressText = document.querySelector(`#${patientId} .progress-text`);
+    const progressFill = document.querySelector(`#${patientId} .progress-fill`);
+    const progress = calculateProgress(patientId);
+    progressText.textContent = `${progress}% Complete`;
+    progressFill.style.width = `${progress}%`;
+    
+    // Save to localStorage
+    localStorage.setItem('taskCompletionData', JSON.stringify(window.taskCompletionData));
+    console.log('Task completion data saved to localStorage in toggleMainTask');
+    
+    // Auto-archive if 100% complete
+    if (progress === 100) {
+        setTimeout(() => {
+            autoArchivePatient(patientId);
+        }, 1000);
+    }
+}
+
 // Toggle subtask completion status
 function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     const task = window.taskCompletionData[patientId][taskIndex];
@@ -2963,6 +3247,8 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
     // Toggle subtask
     const checked = !task.subtasks[subtaskIndex].complete;
     task.subtasks[subtaskIndex].complete = checked;
+    
+    console.log(`Toggled subtask ${subtaskIndex} to ${checked} for patient ${patientId}, task ${taskIndex}`);
     
     // Recalculate task completion status with special logic for Quickbooks Invoice
     let completedSubtasks = 0;
@@ -2982,7 +3268,7 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
             completedSubtasks = totalSubtasks; // Mark as fully complete
         } else if (sentInvoice) {
             completedSubtasks = 1; // Partially complete
-        } else {
+    } else {
             completedSubtasks = 0; // Not started
         }
     } else {
@@ -3009,35 +3295,18 @@ function toggleSubtask(patientId, taskIndex, subtaskIndex) {
         });
     }
     
-    // Update task header visual status
-    const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
-    const taskNumber = taskItem.querySelector('.task-number');
-    const taskStatus = taskItem.querySelector('.task-status');
+    // Update task number color based on completion status
+    updateTaskNumberColor(patientId, taskIndex);
     
-    // Remove old status classes
-    taskItem.classList.remove('not-started', 'partial', 'complete');
-    taskNumber.classList.remove('not-started', 'partial', 'complete');
-    
-    // Determine new status
-    let statusClass, statusText;
-    if (completedSubtasks === 0) {
-        statusClass = 'not-started';
-        statusText = 'Not Started';
-    } else if (completedSubtasks === totalSubtasks) {
-        statusClass = 'complete';
-        statusText = 'Complete';
-    } else {
-        statusClass = 'partial';
-        statusText = 'Partially Complete';
+    // If this is the Written Request task's subtask, also update the Send Adobe Forms task
+    if (task.id === 'written-request') {
+        const adobeFormsTaskIndex = window.taskCompletionData[patientId].findIndex(t => t.id === 'adobe-forms');
+        if (adobeFormsTaskIndex !== -1) {
+            updateTaskNumberColor(patientId, adobeFormsTaskIndex);
+        }
     }
     
-    taskItem.classList.add(statusClass);
-    taskNumber.classList.add(statusClass);
-    taskStatus.textContent = statusText;
-    
-    console.log(`Updated task ${taskIndex} status to: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
-    console.log(`Task item classes:`, taskItem.className);
-    console.log(`Task number classes:`, taskNumber.className);
+    console.log('Current task data after toggle:', window.taskCompletionData[patientId][taskIndex]);
     
     // Update overall progress
     const progressText = document.querySelector(`#${patientId} .progress-text`);
@@ -3066,6 +3335,8 @@ function toggleSubSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
     // Toggle sub-subtask
     const checked = !subtask.subSubtasks[subSubtaskIndex].complete;
     subtask.subSubtasks[subSubtaskIndex].complete = checked;
+    
+    console.log(`Toggled sub-subtask ${subSubtaskIndex} to ${checked} for patient ${patientId}, task ${taskIndex}, subtask ${subtaskIndex}`);
     
     // Recalculate subtask completion status
     let completedSubSubtasks = 0;
@@ -3113,35 +3384,9 @@ function toggleSubSubtask(patientId, taskIndex, subtaskIndex, subSubtaskIndex) {
         });
     }
     
-    // Update task header visual status
-    const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
-    const taskNumber = taskItem.querySelector('.task-number');
-    const taskStatus = taskItem.querySelector('.task-status');
+    // Update task number color based on completion status
+    updateTaskNumberColor(patientId, taskIndex);
     
-    // Remove old status classes
-    taskItem.classList.remove('not-started', 'partial', 'complete');
-    taskNumber.classList.remove('not-started', 'partial', 'complete');
-    
-    // Determine new status
-    let statusClass, statusText;
-    if (completedSubtasks === 0) {
-        statusClass = 'not-started';
-        statusText = 'Not Started';
-    } else if (completedSubtasks === totalSubtasks) {
-        statusClass = 'complete';
-        statusText = 'Complete';
-    } else {
-        statusClass = 'partial';
-        statusText = 'Partially Complete';
-    }
-    
-    taskItem.classList.add(statusClass);
-    taskNumber.classList.add(statusClass);
-    taskStatus.textContent = statusText;
-    
-    console.log(`Updated task ${taskIndex} status to: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
-    console.log(`Task item classes:`, taskItem.className);
-    console.log(`Task number classes:`, taskNumber.className);
     
     // Update overall progress
     const progressText = document.querySelector(`#${patientId} .progress-text`);
@@ -3219,35 +3464,9 @@ function updateSubSubtaskInput(patientId, taskIndex, subtaskIndex, subSubtaskInd
         });
     }
     
-    // Update task header visual status
-    const taskItem = document.querySelector(`#${patientId} .task-item[data-task-index="${taskIndex}"]`);
-    const taskNumber = taskItem.querySelector('.task-number');
-    const taskStatus = taskItem.querySelector('.task-status');
+    // Update task number color based on completion status
+    updateTaskNumberColor(patientId, taskIndex);
     
-    // Remove old status classes
-    taskItem.classList.remove('not-started', 'partial', 'complete');
-    taskNumber.classList.remove('not-started', 'partial', 'complete');
-    
-    // Determine new status
-    let statusClass, statusText;
-    if (completedSubtasks === 0) {
-        statusClass = 'not-started';
-        statusText = 'Not Started';
-    } else if (completedSubtasks === totalSubtasks) {
-        statusClass = 'complete';
-        statusText = 'Complete';
-    } else {
-        statusClass = 'partial';
-        statusText = 'Partially Complete';
-    }
-    
-    taskItem.classList.add(statusClass);
-    taskNumber.classList.add(statusClass);
-    taskStatus.textContent = statusText;
-    
-    console.log(`Updated task ${taskIndex} status to: ${statusClass} (${completedSubtasks}/${totalSubtasks})`);
-    console.log(`Task item classes:`, taskItem.className);
-    console.log(`Task number classes:`, taskNumber.className);
     
     // Update overall progress
     const progressText = document.querySelector(`#${patientId} .progress-text`);
